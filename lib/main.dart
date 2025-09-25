@@ -1,11 +1,24 @@
+
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/author.dart';
+import 'models/post.dart';
+import 'models/comment.dart';
 import 'screens/HomeScreen.dart';
 import 'screens/AccountScreen.dart';
 import 'screens/StatsScreen.dart';
 import 'screens/SettingsScreen.dart';
 import 'package:flutter/services.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  Hive.registerAdapter(AuthorTypeAdapter());
+  Hive.registerAdapter(AuthorAdapter());
+  Hive.registerAdapter(PostAdapter());
+  Hive.registerAdapter(CommentAdapter());
+  await Hive.openBox<Post>('community_posts');
+  await Hive.openBox<Comment>('community_comments');
   runApp(const MyApp());
 }
 
