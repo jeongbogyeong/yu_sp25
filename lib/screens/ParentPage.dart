@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'HomeScreen.dart';
-import 'CalendarScreen.dart';
-import 'StatsScreen.dart';
-import 'SettingsScreen.dart';
-import 'CommunityScreen.dart';
+import 'main/HomeScreen.dart';
+import 'main/CalendarScreen.dart';
+import 'main/StatsScreen.dart';
+import 'main/MyPageScreen.dart';
+import 'main/CommunityScreen.dart';
 
 const int _pageCnt =5;
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+class ParentPage extends StatefulWidget {
+  const ParentPage({super.key});
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<ParentPage> createState() => _ParentPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _ParentPageState extends State<ParentPage> {
   final PageController _pageController = PageController();
   int _selectedIndex = 0;
 
@@ -22,7 +22,7 @@ class _MyHomePageState extends State<MyHomePage> {
     CalendarScreen(),
     StatsScreen(),
     CommunityScreen(),
-    SettingsScreen(),
+    MyPageScreen(),
 
   ];
 
@@ -225,7 +225,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
       case 3:
         return Icons.people;
       case 4:
-        return Icons.settings;
+        return Icons.person;
       default:
         return Icons.help;
     }
@@ -242,7 +242,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
       case 3:
         return "커뮤니티";
       case 4:
-        return "설정";
+        return "마미페이지";
       default:
         return "";
     }
