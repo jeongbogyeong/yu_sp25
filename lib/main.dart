@@ -7,6 +7,7 @@ void main() async {
   await initializeDateFormatting('ko_KR');
   runApp(const MyApp());
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -19,8 +20,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: false,
       ),
-      home: LoginScreen()
+      home: LoginScreen(),
     );
   }
 }
-
