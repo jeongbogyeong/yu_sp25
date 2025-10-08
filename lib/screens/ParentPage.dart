@@ -3,7 +3,7 @@ import 'main/HomeScreen.dart';
 import 'main/CalendarScreen.dart';
 import 'main/StatsScreen.dart';
 import 'main/MyPageScreen.dart';
-import 'main/CommunityScreen.dart';
+import 'community/CommunityScreen.dart';
 
 const int _pageCnt =5;
 
