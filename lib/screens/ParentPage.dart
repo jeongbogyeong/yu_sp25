@@ -3,9 +3,13 @@ import 'main/HomeScreen.dart';
 import 'main/CalendarScreen.dart';
 import 'main/StatsScreen.dart';
 import 'main/MyPageScreen.dart';
-import 'community/CommunityScreen.dart';
+import 'main/CommunityScreen.dart';
 
-const int _pageCnt =5;
+const int _pageCnt = 5;
+
+// ✨ 테마 색상 정의 (로그인/회원가입 화면과 통일)
+const Color _primaryColor = Color(0xFF4CAF50); // 가계부에 어울리는 녹색 계열
+const Color _secondaryColor = Color(0xFFF0F4F8); // 밝은 배경색
 
 class ParentPage extends StatefulWidget {
   const ParentPage({super.key});
@@ -23,12 +27,10 @@ class _ParentPageState extends State<ParentPage> {
     StatsScreen(),
     CommunityScreen(),
     MyPageScreen(),
-
   ];
 
   void _onItemTapped(int index) {
-
-    final duration = Duration(milliseconds: (300 ));
+    const duration = Duration(milliseconds: 300);
 
     _pageController.animateToPage(
       index,
@@ -44,12 +46,11 @@ class _ParentPageState extends State<ParentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(), // 스와이프로 넘기지 못하게 막음
-          children: _pages,
-        ),
+      backgroundColor: _secondaryColor, // Scaffold 배경색 통일
+      body: PageView( // SafeArea 제거: PageView는 일반적으로 전체 화면을 사용
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(), // 스와이프로 넘기지 못하게 막음
+        children: _pages,
       ),
       bottomNavigationBar: _CustomBottomNavBar(
         selectedIndex: _selectedIndex,
@@ -59,6 +60,9 @@ class _ParentPageState extends State<ParentPage> {
   }
 }
 
+// ----------------------------------------------------
+// Custom Bottom Navigation Bar
+// ----------------------------------------------------
 class _CustomBottomNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onTap;
@@ -91,8 +95,8 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
 
     _scaleAnimations = _controllers.map((controller) {
       return TweenSequence([
-        TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2), weight: 50),
-        TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 50),
+        TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 50), // 스케일 축소
+        TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 50),
       ]).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
     }).toList();
 
@@ -129,86 +133,103 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        height: 65,
-        decoration:  BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Colors.grey[300]!, width: 0.5),
+    return Container(
+      // SafeArea는 보통 Scaffold body에 적용하지만, BottomNavigationBar 영역이 명확하므로 Container에서 관리
+      decoration: const BoxDecoration(
+        color: Colors.white, // 배경색 흰색 고정
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12, // 은은한 그림자 추가
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: Offset(0, -2),
           ),
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-        ),
-        child: Stack(
-          children: [
-            Row(
-              children: List.generate(_pageCnt, (index) {
-                return Expanded(
-                  child: InkWell(
-                    onTap: () => widget.onTap(index),
-                    child: AnimatedBuilder(
-                      animation: _controllers[index],
-                      builder: (context, child) {
-                        final scale = _scaleAnimations[index].value;
-                        final rotation = _rotationAnimations[index].value;
-                        final highlightOpacity = _highlightAnimations[index].value;
-      
-                        return Center(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // 하이라이트 박스
+        ],
+      ),
+      child: SafeArea( // 하단 노치 영역으로부터 보호
+        top: false,
+        child: SizedBox(
+          height: 65, // 높이 고정
+          child: Row(
+            children: List.generate(_pageCnt, (index) {
+              final isSelected = widget.selectedIndex == index;
+
+              return Expanded(
+                child: InkWell(
+                  onTap: () => widget.onTap(index),
+                  child: AnimatedBuilder(
+                    animation: _controllers[index],
+                    builder: (context, child) {
+                      final scale = _scaleAnimations[index].value;
+                      final rotation = _rotationAnimations[index].value;
+                      final highlightValue = _highlightAnimations[index].value;
+
+                      // 애니메이션 색상 (녹색 계열)
+                      final Color highlightColor = _primaryColor.withOpacity(0.1);
+
+                      return Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // ✨ 하이라이트 박스 (녹색으로 변경)
+                            if (_controllers[index].isAnimating)
                               Opacity(
-                                opacity: _controllers[index].isAnimating ? (1 - highlightOpacity) : 0,
+                                opacity: 1 - highlightValue, // 애니메이션이 진행될수록 투명해짐
                                 child: Container(
-                                  width: 50 + 20 * highlightOpacity,
-                                  height: 50 + 20 * highlightOpacity,
+                                  width: 50 + 20 * highlightValue,
+                                  height: 50 + 20 * highlightValue,
                                   decoration: BoxDecoration(
-                                    color: Colors.blue[100],
+                                    color: highlightColor,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                               ),
-                              Transform.scale(
-                                scale: scale,
-                                child: Transform.rotate(
-                                  angle: rotation,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        _getIcon(index),
-                                        color: widget.selectedIndex == index
-                                            ? Colors.black
-                                            : Colors.grey,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        _getLabel(index),
-                                        style: TextStyle(
-                                          fontSize: 12 * scale,
-                                          fontWeight: widget.selectedIndex == index
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          color: widget.selectedIndex == index
-                                              ? Colors.black
-                                              : Colors.grey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+
+                            // 선택된 항목 배경 (항상 표시, 탭 애니메이션과 별개)
+                            if (isSelected && !_controllers[index].isAnimating)
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: highlightColor,
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+
+                            Transform.scale(
+                              scale: scale,
+                              child: Transform.rotate(
+                                angle: rotation,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _getIcon(index),
+                                      color: isSelected ? _primaryColor : Colors.grey[600], // ✨ 선택 시 primaryColor 적용
+                                      size: isSelected ? 26 : 24, // 선택 시 아이콘 크기 약간 키우기
+                                    ),
+                                    const SizedBox(height: 2), // 간격 줄임
+                                    Text(
+                                      _getLabel(index),
+                                      style: TextStyle(
+                                        fontSize: 11, // 폰트 크기 고정
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? _primaryColor : Colors.grey[600], // ✨ 선택 시 primaryColor 적용
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              }),
-            ),
-          ],
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -217,15 +238,15 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
   IconData _getIcon(int index) {
     switch (index) {
       case 0:
-        return Icons.home;
+        return Icons.home_rounded; // 둥근 모양 아이콘으로 변경
       case 1:
-        return Icons.calendar_today;
+        return Icons.calendar_month_outlined; // 달력 아이콘 변경
       case 2:
-        return Icons.bar_chart;
+        return Icons.bar_chart_rounded;
       case 3:
-        return Icons.people;
+        return Icons.people_alt_outlined; // 커뮤니티 아이콘 변경
       case 4:
-        return Icons.person;
+        return Icons.person_rounded;
       default:
         return Icons.help;
     }
@@ -242,7 +263,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
       case 3:
         return "커뮤니티";
       case 4:
-        return "마미페이지";
+        return "마이페이지"; // 라벨 오타 수정 (마미페이지 -> 마이페이지)
       default:
         return "";
     }
