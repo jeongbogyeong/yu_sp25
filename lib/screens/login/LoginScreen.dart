@@ -1,16 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart' hide UserInfo;
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:smartmoney/models/UserInfo.dart';
 import 'package:smartmoney/screens/ParentPage.dart';
 import 'SignUpScreen.dart';
-import '../../models/UserInfo.dart';
 //ui위젯
 import 'package:smartmoney/screens/widgets/login_button.dart';
 import 'package:smartmoney/screens/widgets/CommonDialog.dart';
 
-//provider
+//ViewModel
+import 'package:smartmoney/viewmodels/UserViewModel.dart';
 import 'package:provider/provider.dart';
-import '../../providers/UserProvider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,9 +43,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final UserCredential userCredential = await _auth.signInWithEmailAndPassword(email: email, password: password);
       final box = Hive.box<UserInfo>("UserInfos");
       final UserInfo? _userInfo = box.get(userCredential.user!.uid);
-      final user = Provider.of<UserProvider>(context,listen: false);
+      final user = Provider.of<UserViewModel>(context,listen: false);
       if(_userInfo!=null){
-        user.SetAll(_userInfo.uid, _userInfo.name, _userInfo.email, _userInfo.account_number);
+        user.setUser(_userInfo);
       }
 
       // 로그인 성공시

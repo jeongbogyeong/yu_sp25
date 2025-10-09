@@ -13,9 +13,9 @@ import 'models/post.dart';
 import 'models/comment.dart';
 import 'models/UserInfo.dart';
 
-//provier 관련 import
+//ViewModel
+import 'package:smartmoney/viewmodels/UserViewModel.dart';
 import 'package:provider/provider.dart';
-import 'providers/UserProvider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +45,7 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => UserViewModel()),
       ],
       child: const MyApp(),
     ),

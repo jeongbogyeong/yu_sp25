@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide UserInfo;
+import 'package:smartmoney/models/UserInfo.dart';
+
 import '../widgets/CommonDialog.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../models/UserInfo.dart';
 import '../../screens/ParentPage.dart';
 import 'package:flutter/services.dart'; // InputFormatters 사용을 위해 추가
 
-//provider
+//ViewModel
+import 'package:smartmoney/viewmodels/UserViewModel.dart';
 import 'package:provider/provider.dart';
-import '../../providers/UserProvider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -75,9 +76,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: password,
       );
 
-      // 🚨 DB에 넣을 때는 int? 타입을 지원하지 않을 경우, 0이나 적절한 기본값을 사용해야 합니다.
-      // UserInfo 모델과 Hive Box의 타입을 확인하고 int.parse 오류를 방지하도록 로직 수정
-      // 여기서는 int로 강제 변환해야 한다고 가정하고, 변환 불가능 시 0으로 처리합니다.
+
       final int finalAccountNumber = accountNumber ?? 0;
 
 
@@ -91,8 +90,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ));
 
       // Provider 업데이트
-      final user = Provider.of<UserProvider>(context,listen : false );
-      user.SetAll(userCredential.user!.uid, name, email, finalAccountNumber);
+      final user = Provider.of<UserViewModel>(context,listen : false );
+      user.setUser(UserInfo(
+          uid: userCredential.user!.uid,
+          name: name, email: email,
+          account_number: finalAccountNumber
+        )
+      );
 
       CommonDialog.show(
         context,

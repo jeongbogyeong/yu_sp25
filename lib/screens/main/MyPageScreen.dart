@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartmoney/screens/login/LoginScreen.dart';
 
-//provier 관련 import
+//ViewModel
+import 'package:smartmoney/viewmodels/UserViewModel.dart';
 import 'package:provider/provider.dart';
-import '../../providers/UserProvider.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
@@ -83,13 +83,13 @@ class MyPageScreen extends StatelessWidget {
             // backgroundImage: AssetImage("assets/images/profile.png"),
           ),
           const SizedBox(width: 16),
-          Consumer<UserProvider>(
-            builder: (context, provider, child) {
+          Consumer<UserViewModel>(
+            builder: (context, vm, child) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    provider.name,
+                    vm.name,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -98,7 +98,7 @@ class MyPageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    provider.email,
+                    vm.email,
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],
@@ -274,6 +274,8 @@ class MyPageScreen extends StatelessWidget {
           // Firebase 로그아웃 처리
           try {
             await FirebaseAuth.instance.signOut();
+            final user = Provider.of<UserViewModel>(context,listen: false);
+            user.clearUser();
             // 로그아웃 성공 시 로그인 화면으로 이동
             if (context.mounted) {
               Navigator.pushReplacement(
