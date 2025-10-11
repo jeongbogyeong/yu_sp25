@@ -1,6 +1,14 @@
-# smartmoney
+# NUDGE_GAP
 
-A new Flutter project.
+A new Flutter project .
+This project can make your comsumption habit correct with nudge.
+
+
+## key function
+The core function of NUDGE_GAP is its Household Account Book. It provides a clear overview that allows users to monitor their total consumption and understand where their money is going.
+Goal-Based Nudge: It continuously compares the current spending amount against the user's pre-set spending goals (the GAP). When the user exceeds or is about to exceed the goal, the app provides an immediate warning message to discourage further consumption.
+
+
 
 ## Getting Started
 
