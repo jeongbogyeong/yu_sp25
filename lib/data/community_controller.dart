@@ -15,8 +15,8 @@ class CommunityController extends ChangeNotifier {
   List<Comment> _comments = const [];
   List<Comment> get comments => _comments;
 
-  Future<void> load() async {
-    _posts = await repository.getAllPostsNewestFirst();
+  void load() {
+    _posts = repository.getAllPostsNewestFirst();
     // debug
     // ignore: avoid_print
     print('[CommunityController] load: posts=${_posts.length}');
@@ -27,7 +27,6 @@ class CommunityController extends ChangeNotifier {
     required Author author,
     required String text,
     List<String>? imagePaths,
-    String category = '자유',
   }) async {
     final post = Post(
       id: repository.generateId(),
@@ -35,7 +34,6 @@ class CommunityController extends ChangeNotifier {
       createdAt: DateTime.now(),
       text: text,
       imagePaths: imagePaths,
-      category: category,
     );
     await repository.putPost(post);
     // debug
@@ -60,8 +58,8 @@ class CommunityController extends ChangeNotifier {
   }
 
   // 댓글 관련 메서드들
-  Future<void> loadComments(String postId) async {
-    _comments = await repository.getCommentsForPost(postId);
+  void loadComments(String postId) {
+    _comments = repository.getCommentsForPost(postId);
     notifyListeners();
   }
 

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' hide UserInfo;
 import 'package:smartmoney/models/UserInfo.dart';
 
 import '../widgets/CommonDialog.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../screens/ParentPage.dart';
 import 'package:flutter/services.dart'; // InputFormatters 사용을 위해 추가
 
@@ -79,14 +80,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
       final int finalAccountNumber = accountNumber ?? 0;
 
 
-      // Provider 업데이트 (Firebase 사용자 정보 기반)
-      final user = Provider.of<UserViewModel>(context, listen: false);
-      user.setUser(UserInfo(
+      // db 넣기
+      final box = Hive.box<UserInfo>("UserInfos");
+      box.put(userCredential.user?.uid,UserInfo(
         uid: userCredential.user!.uid,
         name: name,
         email: email,
-        account_number: finalAccountNumber,
+        account_number: finalAccountNumber, // int로 저장
       ));
+
+      // Provider 업데이트
+      final user = Provider.of<UserViewModel>(context,listen : false );
+      user.setUser(UserInfo(
+          uid: userCredential.user!.uid,
+          name: name, email: email,
+          account_number: finalAccountNumber
+        )
+      );
 
       CommonDialog.show(
         context,

@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' hide UserInfo;
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:smartmoney/models/UserInfo.dart';
-import 'package:smartmoney/services/user_service.dart';
 import 'package:smartmoney/screens/ParentPage.dart';
 import 'SignUpScreen.dart';
 //ui위젯
@@ -41,20 +41,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final UserCredential userCredential = await _auth.signInWithEmailAndPassword(email: email, password: password);
-      
-      // Firebase 로그인된 사용자 정보로 UserViewModel 업데이트
-      final user = Provider.of<UserViewModel>(context, listen: false);
-      final firebaseUser = userCredential.user!;
-      
-      // Firebase 사용자 정보를 기반으로 UserInfo 생성
-      final userInfo = UserInfo(
-        uid: firebaseUser.uid,
-        name: firebaseUser.displayName ?? '사용자',
-        email: firebaseUser.email ?? email,
-        account_number: 0, // 기본값
-      );
-      
-      user.setUser(userInfo);
+      final box = Hive.box<UserInfo>("UserInfos");
+      final UserInfo? _userInfo = box.get(userCredential.user!.uid);
+      final user = Provider.of<UserViewModel>(context,listen: false);
+      if(_userInfo!=null){
+        user.setUser(_userInfo);
+      }
 
       // 로그인 성공시
       Navigator.pushReplacement(

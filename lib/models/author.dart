@@ -1,6 +1,16 @@
+import 'package:hive/hive.dart';
+
+part 'author.g.dart';
+
+@HiveType(typeId: 11)
 class Author {
+  @HiveField(0)
   final String email;
+
+  @HiveField(1)
   final String userId; // Firebase UID
+
+  @HiveField(2)
   final String? displayName; // 사용자 표시명 (선택사항)
 
   const Author({
