@@ -1,19 +1,7 @@
-import 'package:hive/hive.dart';
-
-part 'UserInfo.g.dart';
-
-@HiveType(typeId: 0)
-class UserInfo extends HiveObject {
-  @HiveField(0)
+class UserInfo {
   String uid;
-
-  @HiveField(1)
   String name;
-
-  @HiveField(2)
   String email;
-
-  @HiveField(3)
   int account_number;
 
 

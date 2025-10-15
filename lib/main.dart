@@ -6,12 +6,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-// ✅ Hive 관련 import
-import 'package:hive_flutter/hive_flutter.dart';
-import 'models/author.dart';
-import 'models/post.dart';
-import 'models/comment.dart';
-import 'models/UserInfo.dart';
+// ✅ MySQL 관련 import
+import 'database/database_helper.dart';
 
 //ViewModel
 import 'package:smartmoney/viewmodels/UserViewModel.dart';
@@ -25,19 +21,8 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Hive 초기화
-  await Hive.initFlutter();
-
-  // Hive 어댑터 등록
-  Hive.registerAdapter(AuthorAdapter());
-  Hive.registerAdapter(PostAdapter());
-  Hive.registerAdapter(CommentAdapter());
-  Hive.registerAdapter(UserInfoAdapter());
-
-  // 박스 열기
-  await Hive.openBox<Post>('community_posts');
-  await Hive.openBox<Comment>('community_comments');
-  await Hive.openBox<UserInfo>('UserInfos');
+  // MySQL 데이터베이스 초기화
+  await DatabaseHelper.instance.init();
 
   // 한국어 날짜 포맷
   await initializeDateFormatting('ko_KR');
