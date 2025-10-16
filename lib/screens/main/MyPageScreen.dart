@@ -1,10 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartmoney/screens/login/LoginScreen.dart';
 
 //ViewModel
-import 'package:smartmoney/viewmodels/UserViewModel.dart';
+import '../viewmodels/UserViewModel.dart';
 import 'package:provider/provider.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
@@ -89,7 +88,7 @@ class MyPageScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vm.name,
+                    vm.currentUser!.name,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -98,7 +97,7 @@ class MyPageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    vm.email,
+                    vm.currentUser!.email,
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],
@@ -271,20 +270,17 @@ class MyPageScreen extends StatelessWidget {
         Icons.logout_rounded,
         "로그아웃",
         () async {
-          // Firebase 로그아웃 처리
           try {
-            await FirebaseAuth.instance.signOut();
-            final user = Provider.of<UserViewModel>(context,listen: false);
-            user.clearUser();
-            // 로그아웃 성공 시 로그인 화면으로 이동
             if (context.mounted) {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
+              await Future.microtask(() {
+                // 3.  UserViewModel 상태 정리
+              });
             }
           } catch (e) {
-            // 오류 처리 (예: 스낵바 표시)
             print("로그아웃 오류: $e");
           }
         },

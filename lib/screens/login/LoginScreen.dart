@@ -1,15 +1,16 @@
-import 'package:firebase_auth/firebase_auth.dart' hide UserInfo;
+
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import 'package:smartmoney/models/UserInfo.dart';
+import 'package:smartmoney/domain/usecases/fetch_user.dart';
+import 'package:smartmoney/domain/usecases/get_spending.dart';
+import 'package:smartmoney/domain/usecases/login_user.dart';
 import 'package:smartmoney/screens/ParentPage.dart';
+import 'package:smartmoney/screens/viewmodels/SpendingViewModel.dart';
+import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'SignUpScreen.dart';
 //ui위젯
 import 'package:smartmoney/screens/widgets/login_button.dart';
 import 'package:smartmoney/screens/widgets/CommonDialog.dart';
 
-//ViewModel
-import 'package:smartmoney/viewmodels/UserViewModel.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -25,61 +26,66 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isObscureText = true;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); //  폼 유효성 검사를 위한 키
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // ✨ UI 개선을 위한 색상 정의 (회원가입 화면과 동일)
   static const Color primaryColor = Color(0xFF4CAF50); // 가계부에 어울리는 녹색 계열
   static const Color secondaryColor = Color(0xFFF0F4F8); // 밝은 배경색
 
+
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) {
-      return; // 폼 유효성 검사 실패 시 종료
+      return;
     }
 
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
+    // Provider에서 필요한 객체 가져오기
+    final loginUserUseCase = Provider.of<LoginUser>(context, listen: false);
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final getSpending = Provider.of<GetSpending>(context, listen: false);
     try {
-      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(email: email, password: password);
-      final box = Hive.box<UserInfo>("UserInfos");
-      final UserInfo? _userInfo = box.get(userCredential.user!.uid);
-      final user = Provider.of<UserViewModel>(context,listen: false);
-      if(_userInfo!=null){
-        user.setUser(_userInfo);
-      }
+      // 1. 🚀 MySQL 로그인 시도 (UseCase 호출)
+      final userEntity = await loginUserUseCase.call(email, password);
 
-      // 로그인 성공시
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const ParentPage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      String message = "";
-      switch (e.code) {
-        case "user-not-found":
-          message = "가입되지 않은 이메일이거나 비밀번호가 틀렸습니다."; // 보안을 위해 통합 메시지 사용 권장
-          break;
-        case "wrong-password":
-          message = "가입되지 않은 이메일이거나 비밀번호가 틀렸습니다.";
-          break;
-        case "invalid-email":
-          message = "유효하지 않은 이메일 형식입니다.";
-          break;
-        default:
-          message = "로그인 실패: ${e.message}";
+      if (userEntity != null) {
+        // 2. ✅ 로그인 성공 및 정보 가져오기 성공: UserViewModel에 저장
+        userViewModel.setUser(userEntity);
+        getSpending.setID(userEntity.id);
+        CommonDialog.show(
+          context,
+          title: "로그인 성공 🎉",
+          content: "${userEntity.name}님, Nudge_gap 오신 것을 환영합니다!",
+          isSuccess: true,
+          onConfirmed: () async {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ParentPage()),
+            );
+          },
+        );
+      } else {
+        // UseCase에서 null을 반환했지만 Exception이 발생하지 않은 경우
+        throw Exception("Authentication failed, user data not returned.");
+      }
+    } catch (e) {
+      // ⚠️ UseCase, Repository, DataSource에서 발생한 모든 Exception을 여기서 처리
+      String message = "알 수 없는 오류가 발생했습니다.";
+
+      // Exception 메시지에서 구체적인 서버 에러를 추출 (예: 'Exception: Login Failed: 이메일 또는 비밀번호가 틀렸습니다.')
+      if (e.toString().contains("Login Failed:")) {
+        message = e.toString().split("Login Failed:").last.trim();
+      } else if (e.toString().contains("Server connection error:")) {
+        message = "서버 연결에 문제가 발생했습니다. (${e.toString().split(":").last.trim()})";
+      } else {
+        print("Raw Error: $e"); // 알 수 없는 오류는 로그로 출력
       }
 
       CommonDialog.show(
         context,
         title: "로그인 실패 🚨",
         content: message,
-        isSuccess: false,
-      );
-    } catch (e) {
-      CommonDialog.show(
-        context,
-        title: "로그인 실패 🚫",
-        content: "알 수 없는 오류가 발생했습니다.",
         isSuccess: false,
       );
     }
@@ -110,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "SmartMoney",
+                    "Nudge_gap",
                     style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w900,

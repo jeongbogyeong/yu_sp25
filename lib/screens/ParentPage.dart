@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:smartmoney/screens/viewmodels/SpendingViewModel.dart';
+import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'main/HomeScreen.dart';
 import 'main/CalendarScreen.dart';
 import 'main/StatsScreen.dart';
@@ -20,6 +23,7 @@ class ParentPage extends StatefulWidget {
 class _ParentPageState extends State<ParentPage> {
   final PageController _pageController = PageController();
   int _selectedIndex = 0;
+  late final SpendingViewModel spendingVM;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -40,6 +44,16 @@ class _ParentPageState extends State<ParentPage> {
 
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      spendingVM = Provider.of<SpendingViewModel>(context, listen: false);
+      await spendingVM.loadSpendingData(int.parse(
+          Provider.of<UserViewModel>(context, listen: false).currentUser!.id));
     });
   }
 

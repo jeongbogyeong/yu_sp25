@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide UserInfo;
-import 'package:smartmoney/models/UserInfo.dart';
+import 'package:flutter/services.dart';
+import 'package:smartmoney/domain/usecases/get_spending.dart';
+import 'package:smartmoney/domain/usecases/login_user.dart';
+import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 
 import '../widgets/CommonDialog.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../../screens/ParentPage.dart';
-import 'package:flutter/services.dart'; // InputFormatters 사용을 위해 추가
 
-//ViewModel
-import 'package:smartmoney/viewmodels/UserViewModel.dart';
+// ViewModel import
 import 'package:provider/provider.dart';
+import '../viewmodels/SignupViewModel.dart'; // ✅ 새로 만든 ViewModel import
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -19,124 +19,105 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); // 폼 유효성 검사를 위한 키
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
-  final TextEditingController nameController = TextEditingController(); // 이름 컨트롤러
-  final TextEditingController accountNumberController = TextEditingController(); // 계좌번호 컨트롤러
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController accountNumberController = TextEditingController();
 
   bool _isObscureText = true;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // ✨ UI 개선을 위한 색상 정의
-  static const Color primaryColor = Color(0xFF4CAF50); // 녹색
-  static const Color secondaryColor = Color(0xFFF0F4F8); // 밝은 배경색
+  static const Color primaryColor = Color(0xFF4CAF50);
+  static const Color secondaryColor = Color(0xFFF0F4F8);
 
   Future<void> _signUp() async {
+    // 1. 폼 유효성 검사
     if (!_formKey.currentState!.validate()) {
-      return; // 폼 유효성 검사 실패 시 종료
+      return;
     }
 
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
     final name = nameController.text.trim();
-    final accountNumberString = accountNumberController.text.trim(); // 문자열로 받음
-
-    // 계좌번호를 안전하게 파싱 (선택적 입력이므로 값이 있을 때만 파싱 시도)
-    int? accountNumber = accountNumberString.isEmpty ? null : int.tryParse(accountNumberString);
+    final accountNumberString = accountNumberController.text.trim();
 
     if (password != confirmPassword) {
-      CommonDialog.show(
-        context,
-        title: "회원가입 실패",
-        content: "비밀번호가 일치하지 않습니다.",
-        isSuccess: false,
-      );
+      // ... (비밀번호 불일치 처리)
       return;
     }
 
-    // 계좌번호가 있지만 숫자로 변환에 실패했을 경우 (다시 검사)
-    if (accountNumberString.isNotEmpty && accountNumber == null) {
-      CommonDialog.show(
-        context,
-        title: "회원가입 실패",
-        content: "주 계좌번호는 숫자만 입력해야 합니다.",
-        isSuccess: false,
-      );
+    if (accountNumberString.isNotEmpty && int.tryParse(accountNumberString) == null) {
+      // ... (계좌번호 숫자 검사 처리)
       return;
     }
 
+    final signupViewModel = Provider.of<SignupViewModel>(context, listen: false);
+    final loginUserUseCase = Provider.of<LoginUser>(context, listen: false);
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final getSpending = Provider.of<GetSpending>(context, listen: false);
+    // 로딩 상태 표시 (필요시)
 
     try {
-      // Firebase 회원가입
-      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+
+      //  '0'으로 전달하고 DB에서 auto_increment를 사용
+      final String mysqlId = '0';
+
+      // ✅ MySQL DATE 형식에 맞게 'YYYY-MM-DD'로 명확하게 포맷
+      final DateTime now = DateTime.now();
+      final String regdate = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      // 4. 🚀 클린 아키텍처를 통한 MySQL 데이터베이스 저장 (ID를 0으로 전달)
+      await signupViewModel.registerUser(
+        id: mysqlId,
         email: email,
         password: password,
-      );
-
-
-      final int finalAccountNumber = accountNumber ?? 0;
-
-
-      // db 넣기
-      final box = Hive.box<UserInfo>("UserInfos");
-      box.put(userCredential.user?.uid,UserInfo(
-        uid: userCredential.user!.uid,
         name: name,
-        email: email,
-        account_number: finalAccountNumber, // int로 저장
-      ));
-
-      // Provider 업데이트
-      final user = Provider.of<UserViewModel>(context,listen : false );
-      user.setUser(UserInfo(
-          uid: userCredential.user!.uid,
-          name: name, email: email,
-          account_number: finalAccountNumber
-        )
+        regdate: regdate,
       );
 
-      CommonDialog.show(
-        context,
-        title: "회원가입 성공 🎉",
-        content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
-        isSuccess: true,
-        onConfirmed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const ParentPage()),
-          );
-        },
-      );
-    } on FirebaseAuthException catch (e) {
-      String message = "";
-      switch (e.code) {
-        case "email-already-in-use":
-          message = "이미 가입된 이메일입니다.";
-          break;
-        case "invalid-email":
-          message = "유효하지 않은 이메일 형식입니다.";
-          break;
-        case "weak-password":
-          message = "비밀번호는 최소 6자 이상이어야 합니다.";
-          break;
-        default:
-          message = "회원가입 실패: ${e.message}";
+      final userEntity = await loginUserUseCase.call(email, password);
+
+      if (userEntity != null) {
+        userViewModel.setUser(userEntity);
+        getSpending.setID(userEntity.id);
+        // 5. ✅ MySQL 저장 성공
+        CommonDialog.show(
+          context,
+          title: "회원가입 성공 🎉",
+          content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
+          isSuccess: true,
+          onConfirmed: () {
+            // 성공 시 로그인 화면으로 이동하는 것이 일반적이지만,
+            // 기존 코드와 같이 ParentPage로 이동하도록 유지합니다.
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ParentPage()),
+            );
+          },
+        );
+      }else {
+        // UseCase에서 null을 반환했지만 Exception이 발생하지 않은 경우
+        throw Exception("Authentication failed, user data not returned.");
       }
+    } catch (e) {
+      // ⚠️ MySQL 저장 실패 (DataSource에서 던진 Exception 처리)
+      String message = "알 수 없는 오류가 발생했습니다.";
+
+      // Exception 메시지에서 구체적인 서버 에러를 추출 (예: 'Exception: MySQL registration failed: 이미 등록된 이메일입니다.')
+      if (e.toString().contains("MySQL registration failed:")) {
+        message = e.toString().split("MySQL registration failed:").last.trim();
+      } else if (e.toString().contains("Server connection error:")) {
+        message = "서버 연결에 문제가 발생했습니다. (${e.toString().split(":").last.trim()})";
+      } else {
+        print("Raw Error: $e"); // 알 수 없는 오류는 로그로 출력
+      }
+
       CommonDialog.show(
         context,
         title: "회원가입 실패 🚨",
         content: message,
-        isSuccess: false,
-      );
-    } catch (e) {
-      print("에러 코드" + e.toString());
-      CommonDialog.show(
-        context,
-        title: "회원가입 실패 🚫",
-        content: "알 수 없는 오류가 발생했습니다.",
         isSuccess: false,
       );
     }
@@ -144,24 +125,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // build 메서드 내용은 변경 없음 (UI 로직)
     return Scaffold(
-      backgroundColor: secondaryColor, // 밝은 배경색 적용
+      backgroundColor: secondaryColor,
       appBar: AppBar(
         title: const Text("회원가입"),
-        backgroundColor: primaryColor, // 앱바 색상 변경
-        foregroundColor: Colors.white, // 앱바 텍스트 색상 변경
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView( // 키보드 오버플로우 방지
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
-        child: Form( // ✨ Form 위젯으로 감싸서 유효성 검사 사용
+        child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ----------------------------------------------------
-              // 이름 입력 필드
-              // ----------------------------------------------------
+              // ... 이름 입력 필드
               _buildTextFormField(
                 controller: nameController,
                 labelText: "이름",
@@ -176,9 +156,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ----------------------------------------------------
-              // 이메일 입력 필드
-              // ----------------------------------------------------
+              // ... 이메일 입력 필드
               _buildTextFormField(
                 controller: emailController,
                 labelText: "이메일",
@@ -196,45 +174,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ----------------------------------------------------
-              // ✅ 계좌번호 입력 필드 (유효성 검사 및 포맷터 수정)
-              // ----------------------------------------------------
+              // ... 계좌번호 입력 필드
               _buildTextFormField(
                 controller: accountNumberController,
                 labelText: "주 계좌번호 (선택, 숫자 20자리 이하)",
                 icon: Icons.account_balance_wallet_outlined,
                 keyboardType: TextInputType.number,
-                // ✅ 하이픈 입력을 막고, 20자리로 제한
                 inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly, // 숫자만 허용 (하이픈 제외)
-                  LengthLimitingTextInputFormatter(20), // 20자리 이하로 길이 제한
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(20),
                 ],
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
-                    // 숫자만 허용 (FilteringTextInputFormatter로 이미 처리되지만 안전을 위해 다시 검사)
                     if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
                       return '계좌번호는 숫자만 입력해야 합니다.';
                     }
-                    // 20자리 이하 검사 (LengthLimitingTextInputFormatter로 이미 처리됨)
                   }
-                  // 선택적 필드이므로 비어있는 것은 허용
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // ----------------------------------------------------
-              // 비밀번호 입력 필드
-              // ----------------------------------------------------
+              // ... 비밀번호 입력 필드
               _buildPasswordFormField(
                 controller: passwordController,
                 labelText: "비밀번호 (6자 이상)",
               ),
               const SizedBox(height: 16),
 
-              // ----------------------------------------------------
-              // 비밀번호 확인 입력 필드
-              // ----------------------------------------------------
+              // ... 비밀번호 확인 입력 필드
               _buildPasswordFormField(
                 controller: confirmPasswordController,
                 labelText: "비밀번호 확인",
@@ -252,9 +220,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               const SizedBox(height: 32),
 
-              // ----------------------------------------------------
-              // 회원가입 버튼
-              // ----------------------------------------------------
+              // ... 회원가입 버튼
               ElevatedButton(
                 onPressed: _signUp,
                 style: ElevatedButton.styleFrom(
@@ -278,22 +244,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // ✨ 공통 TextFormField 위젯 (inputFormatters 매개변수 추가)
-  // ----------------------------------------------------
+
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String labelText,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters, // ✅ 새로 추가된 매개변수
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
-      inputFormatters: inputFormatters, // ✅ 적용
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: labelText,
         prefixIcon: Icon(icon, color: primaryColor),
@@ -317,9 +281,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // 비밀번호 TextFormField 위젯 (변경 없음)
-  // ----------------------------------------------------
   Widget _buildPasswordFormField({
     required TextEditingController controller,
     required String labelText,

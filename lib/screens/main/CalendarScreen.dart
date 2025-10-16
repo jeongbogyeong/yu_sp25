@@ -111,15 +111,15 @@ class _ExpenseCalendarState extends State<CalendarScreen> {
 // ✅ 1. 지출 요약 카드 (Summary Card) - 총 지출액 왼쪽, 보조 정보 오른쪽 열 정렬
 // ----------------------------------------------------
   Widget _buildSummaryCard() {
-    final summary = _calculateMonthlySummary();
-    final total = summary['total']!;
-    final dailyAverage = summary['daily_average']!;
+      final summary = _calculateMonthlySummary();
+      final total = summary['total']!;
+      final dailyAverage = summary['daily_average']!;
 
-    // 현재 달인지 확인하여 일일 평균 표시 여부 결정
-    final isCurrentMonth = _focusedDay.year == DateTime.now().year && _focusedDay.month == DateTime.now().month;
+      // 현재 달인지 확인하여 일일 평균 표시 여부 결정
+      final isCurrentMonth = _focusedDay.year == DateTime.now().year && _focusedDay.month == DateTime.now().month;
 
-    // 금액 포맷팅 헬퍼
-    String formatAmount(double amount) {
+      // 금액 포맷팅 헬퍼
+      String formatAmount(double amount) {
       String formatted = NumberFormat('#,###').format(amount.abs().round());
       return formatted + "원";
     }
@@ -310,10 +310,7 @@ class _ExpenseCalendarState extends State<CalendarScreen> {
               final expense = _getExpenseForDay(day);
 
               return Container(
-                decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
+
                 alignment: Alignment.topCenter,
                 padding: const EdgeInsets.only(top: 8),
                 child: Column(
@@ -324,7 +321,8 @@ class _ExpenseCalendarState extends State<CalendarScreen> {
                       "${day.day}",
                       style: TextStyle(
                         fontSize: 16,
-                        color: day.weekday == DateTime.sunday ? Colors.red[400] : Colors.black87,
+                        fontWeight: FontWeight.bold, // 오늘 날짜를 더 강조
+                        color: _primaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
