@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:smartmoney/screens/viewmodels/SpendingViewModel.dart';
+import 'package:smartmoney/screens/viewmodels/StatViewModel.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'main/HomeScreen.dart';
 import 'main/CalendarScreen.dart';
@@ -23,7 +23,7 @@ class ParentPage extends StatefulWidget {
 class _ParentPageState extends State<ParentPage> {
   final PageController _pageController = PageController();
   int _selectedIndex = 0;
-  late final SpendingViewModel spendingVM;
+  late final StatViewModel statVM;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -51,9 +51,9 @@ class _ParentPageState extends State<ParentPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      spendingVM = Provider.of<SpendingViewModel>(context, listen: false);
-      await spendingVM.loadSpendingData(int.parse(
-          Provider.of<UserViewModel>(context, listen: false).currentUser!.id));
+      statVM = Provider.of<StatViewModel>(context, listen: false);
+      await statVM.loadSpendingData(
+          Provider.of<UserViewModel>(context, listen: false).user!.id);
     });
   }
 

@@ -1,15 +1,17 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class UserEntity {
   final String id;
-  final String email;
-  final String password;
   final String name;
-  final String regdate;
+  final String email;
+  final int account_number;
 
-  UserEntity({
+  const UserEntity({
     required this.id,
-    required this.email,
-    required this.password,
     required this.name,
-    required this.regdate,
+    required this.email,
+    required this.account_number,
   });
+
+
 }

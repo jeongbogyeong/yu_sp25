@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:smartmoney/domain/usecases/fetch_spending.dart';
-import 'package:smartmoney/domain/usecases/fetch_user.dart';
-import 'package:smartmoney/domain/usecases/get_spending.dart';
-import 'package:smartmoney/domain/usecases/login_user.dart';
-import 'package:smartmoney/screens/viewmodels/SpendingViewModel.dart';
+import 'package:smartmoney/domain/usecases/stat_user.dart';
+import 'package:smartmoney/screens/viewmodels/StatViewModel.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/login/LoginScreen.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -14,15 +12,16 @@ import 'package:provider/provider.dart';
 import 'package:get_it/get_it.dart'; // GetIt 임포트
 import 'di_setup.dart'; // DI 설정 파일 임포트
 
-// 뷰모델 import (Provider에 넘겨주기 위함)
-import 'screens/viewmodels/SignupViewModel.dart';
+
 
 // DI 인스턴스
 final locator = GetIt.instance;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  String supabaseUrl ='https://hlaszktpxqzzknxjyabb.supabase.co';
+  String supabaseKey ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsYXN6a3RweHF6emtueGp5YWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1ODkyMjQsImV4cCI6MjA3NjE2NTIyNH0.0x7SwkmdAypsSTtakOId9h7HDknoDiPmEYa2iYC7mZY';
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   //GetIt 초기화 호출
   setupLocator();
 
@@ -33,18 +32,13 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // 1. Signup ViewModel
-        ChangeNotifierProvider(create: (_) => locator<SignupViewModel>()),
-
-        // 🚀 2. User State ViewModel (ChangeNotifierProvider)
+        // ViewModel
         ChangeNotifierProvider(create: (_) => locator<UserViewModel>()),
-        ChangeNotifierProvider(create: (_) => locator<SpendingViewModel>()),
+        ChangeNotifierProvider(create: (_) => locator<StatViewModel>()),
 
         // 🚀 3. FetchUser UseCase (일반 Provider)
-        Provider<FetchUser>(create: (_) => locator<FetchUser>()),
-        Provider<LoginUser>(create: (_) => locator<LoginUser>()),
-        Provider<GetSpending>(create: (_) => locator<GetSpending>()),
-        Provider<FetchSpending>(create: (_) => locator<FetchSpending>()),
+        Provider<StatUser>(create: (_) => locator<StatUser>()),
+
       ],
       child: const MyApp(),
     ),

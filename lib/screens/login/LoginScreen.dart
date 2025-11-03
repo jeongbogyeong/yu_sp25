@@ -1,10 +1,8 @@
 
 import 'package:flutter/material.dart';
-import 'package:smartmoney/domain/usecases/fetch_user.dart';
-import 'package:smartmoney/domain/usecases/get_spending.dart';
-import 'package:smartmoney/domain/usecases/login_user.dart';
+import 'package:smartmoney/domain/usecases/stat_user.dart';
 import 'package:smartmoney/screens/ParentPage.dart';
-import 'package:smartmoney/screens/viewmodels/SpendingViewModel.dart';
+
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'SignUpScreen.dart';
 //ui위젯
@@ -42,17 +40,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = passwordController.text.trim();
 
     // Provider에서 필요한 객체 가져오기
-    final loginUserUseCase = Provider.of<LoginUser>(context, listen: false);
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-    final getSpending = Provider.of<GetSpending>(context, listen: false);
-    try {
-      // 1. 🚀 MySQL 로그인 시도 (UseCase 호출)
-      final userEntity = await loginUserUseCase.call(email, password);
+    final statUserCase = Provider.of<StatUser>(context, listen: false);
 
+    try {
+      final userEntity = await userViewModel.login(email, password);
       if (userEntity != null) {
-        // 2. ✅ 로그인 성공 및 정보 가져오기 성공: UserViewModel에 저장
-        userViewModel.setUser(userEntity);
-        getSpending.setID(userEntity.id);
+        statUserCase.setID(userEntity.id);
         CommonDialog.show(
           context,
           title: "로그인 성공 🎉",
@@ -73,13 +67,21 @@ class _LoginScreenState extends State<LoginScreen> {
       // ⚠️ UseCase, Repository, DataSource에서 발생한 모든 Exception을 여기서 처리
       String message = "알 수 없는 오류가 발생했습니다.";
 
-      // Exception 메시지에서 구체적인 서버 에러를 추출 (예: 'Exception: Login Failed: 이메일 또는 비밀번호가 틀렸습니다.')
-      if (e.toString().contains("Login Failed:")) {
-        message = e.toString().split("Login Failed:").last.trim();
-      } else if (e.toString().contains("Server connection error:")) {
-        message = "서버 연결에 문제가 발생했습니다. (${e.toString().split(":").last.trim()})";
-      } else {
-        print("Raw Error: $e"); // 알 수 없는 오류는 로그로 출력
+      if (e.toString().contains("Invalid login credentials") || e.toString().contains("Invalid email or password")) {
+        message = "이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.";
+      }
+      // 사용자 존재하지 않음 (이메일 오타 또는 미가입)
+      else if (e.toString().contains("User not found") || e.toString().contains("user-not-found")) {
+        message = "해당 이메일로 등록된 사용자가 없습니다. 회원가입이 필요합니다.";
+      }
+      // 계정 비활성화 (관리자에 의해 정지된 경우)
+      else if (e.toString().contains("User disabled") || e.toString().contains("user-disabled")) {
+        message = "사용이 정지된 계정입니다. 관리자에게 문의하세요.";
+      }
+      // 기타 인증 오류
+      else {
+        print("AuthException: $e");
+        message = "인증 서비스 오류: ${e.toString()}";
       }
 
       CommonDialog.show(

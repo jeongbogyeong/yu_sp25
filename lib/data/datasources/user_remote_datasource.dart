@@ -1,144 +1,72 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'user_datasource.dart';
-import '../../api/api.dart';
+import 'package:smartmoney/domain/entities/user_entity.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+class UserRemoteDataSource {
+  final SupabaseClient client;
+  UserRemoteDataSource(this.client);
 
+  Future<UserEntity?> login(String email, String password) async {
+    final response =await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    final user = response.user;
+    if(user!=null){
+      final data = await client.from('userInfo_table').select().eq('uid', user.id).maybeSingle();
+      if (data == null) return null;
 
-class UserRemoteDataSource implements UserDataSource{
-  @override
-  Future<bool> registerUserToMySQL(Map<String, dynamic> userData) async {
-    try {
-      final response = await http.post(
-        Uri.parse(API.signup),
-        body: userData,
+      return UserEntity(
+        id: data['uid'],
+        name: data['name'],
+        email: data['email'],
+        account_number: data['account_number']
       );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        // PHP 파일이 반환하는 "success": true/false를 확인
-        return jsonResponse['success'] == true;
-      } else {
-        final uri = Uri.parse(API.signup);
-        print('Requesting URL: $uri');
-        print('Server error: ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      // 네트워크 통신 오류
-      print('Network error: $e');
-      return false;
     }
+    return null;
   }
 
-  @override
-  Future<Map<String, dynamic>?> fetchUserFromMySQL(String uid) async {
+  Future<UserEntity?> signup({
+    required String email,
+    required String password,
+    required String name,
+    required int accountNumber,
+  }) async {
     try {
-      final response = await http.post(
-        Uri.parse(API.fetchUser),
-        body: {'user_id': uid}, // UID를 서버에 전달
+      final registered = await client.from('userInfo_table').select().eq('email', email).maybeSingle();
+      if(registered!=null) return null;
+      final response = await client.auth.signUp(
+        email: email,
+        password: password,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-
-        if (jsonResponse['success'] == true) {
-          // 서버에서 받은 사용자 데이터를 반환
-          return jsonResponse['user_data'] as Map<String, dynamic>?;
-        }
+      final user = response.user;
+      if (user == null) {
+        throw Exception("회원가입 실패: Supabase가 user를 반환하지 않았습니다.");
       }
-      return null;
+
+      // 2️⃣ Supabase Auth에서 받은 uid (유저 고유 ID)
+      final uid = user.id;
+
+      // 3️⃣ userInfo 테이블에 추가 정보 저장
+      await client.from('userInfo_table').insert({
+        'uid': uid,
+        'name': name,
+        'email': email,
+        'account_number': accountNumber,
+      });
+
+      return UserEntity(
+          id: uid,
+          name: name,
+          email: email,
+          account_number: accountNumber);
     } catch (e) {
-      print('Error fetching user: $e');
-      return null;
-    }
-  }
-
-  @override
-  Future<Map<String, dynamic>?> loginUserToMySQL(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse(API.login),
-        body: {
-          'user_email': email,
-          // PHP에서 md5를 사용하고 있으므로, 여기서도 비밀번호를 해시하여 보내는 것이 안전합니다.
-          // 하지만 보안을 위해 실제 앱에서는 SHA-256이나 bcrypt를 사용하는 것이 좋습니다.
-          // 여기서는 PHP 코드와의 일관성을 위해 일단 해시 없이 평문을 보낸다고 가정합니다.
-          'user_password': password,
-        },
-      );
-
-      // 🚀 디버깅 로그 추가
-      print('Login Raw Server Response: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-
-        if (jsonResponse['success'] == true) {
-          // 로그인 성공 시 사용자 데이터 맵 반환
-          return jsonResponse['user_data'] as Map<String, dynamic>?;
-        }
-        // 서버에서 인증 실패 (비밀번호 불일치 등)
-        final String errorMessage = jsonResponse['message'] ?? "이메일 또는 비밀번호가 틀렸습니다.";
-        throw Exception("Login Failed: $errorMessage");
-
-      } else {
-        // HTTP 상태 코드 오류
-        throw Exception("Server connection error: HTTP ${response.statusCode}");
-      }
-    } catch (e) {
+      print("회원가입 에러 발생: $e");
       rethrow;
     }
   }
 
-  @override
-  Future<List<Map<String, dynamic>>?> getSpendingFromMySQL(int uid) async {
-    try {
-      final response = await http.post(
-        Uri.parse(API.getSpending),
-        body: {'user_id': uid.toString()}, // ⚠️ 문자열 변환 필요
-      );
-
-      if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body);
-
-        if (jsonResponse['success'] == true) {
-          final List<dynamic> data = jsonResponse['spending_data'];
-
-          // List<dynamic> → List<Map<String, dynamic>>로 캐스팅
-          return data.map((item) => item as Map<String, dynamic>).toList();
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('Error GET spending_data: $e');
-      return null;
-    }
-  }
-
-
-  Future<bool> fetchSpendingFromMySQL(Map<String, dynamic> userData)async {
-    try {
-      final response = await http.post(
-        Uri.parse(API.fetchSpending),
-        body: userData,
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        // PHP 파일이 반환하는 "success": true/false를 확인
-        return jsonResponse['success'] == true;
-      } else {
-        final uri = Uri.parse(API.signup);
-        print('Requesting URL: $uri');
-        print('Server error: ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      // 네트워크 통신 오류
-      print('Network error: $e');
-      return false;
-    }
+  Future<void> logout() async {
+    await client.auth.signOut();
   }
 }

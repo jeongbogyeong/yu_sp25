@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:smartmoney/domain/usecases/get_spending.dart';
-import 'package:smartmoney/domain/usecases/login_user.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../widgets/CommonDialog.dart';
 import '../../screens/ParentPage.dart';
 
 // ViewModel import
 import 'package:provider/provider.dart';
-import '../viewmodels/SignupViewModel.dart'; // ✅ 새로 만든 ViewModel import
+
+final supabase = Supabase.instance.client;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -32,8 +32,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   static const Color secondaryColor = Color(0xFFF0F4F8);
 
   Future<void> _signUp() async {
-    // 1. 폼 유효성 검사
+
     if (!_formKey.currentState!.validate()) {
+     // print("폼 유효성 검사");
       return;
     }
 
@@ -44,45 +45,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final accountNumberString = accountNumberController.text.trim();
 
     if (password != confirmPassword) {
-      // ... (비밀번호 불일치 처리)
-      return;
+      CommonDialog.show(
+        context,
+        title: "회원가입 실패 🚨",
+        content: "비밀번호와 비밀번호 확인 값이 일치하지 않습니다.",
+        isSuccess: false,
+      );
+      return; // 불일치 시 사용자에게 알림 후 종료
     }
 
     if (accountNumberString.isNotEmpty && int.tryParse(accountNumberString) == null) {
-      // ... (계좌번호 숫자 검사 처리)
-      return;
+      CommonDialog.show(
+        context,
+        title: "회원가입 실패 🚨",
+        content: "계좌번호는 숫자만 입력해야 합니다.",
+        isSuccess: false,
+      );
+      return; // 숫자 검사 실패 시 사용자에게 알림 후 종료
     }
 
-    final signupViewModel = Provider.of<SignupViewModel>(context, listen: false);
-    final loginUserUseCase = Provider.of<LoginUser>(context, listen: false);
+
+
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-    final getSpending = Provider.of<GetSpending>(context, listen: false);
+    //final getSpending = Provider.of<GetSpending>(context, listen: false);
     // 로딩 상태 표시 (필요시)
 
     try {
 
-      //  '0'으로 전달하고 DB에서 auto_increment를 사용
-      final String mysqlId = '0';
-
-      // ✅ MySQL DATE 형식에 맞게 'YYYY-MM-DD'로 명확하게 포맷
-      final DateTime now = DateTime.now();
-      final String regdate = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
-      // 4. 🚀 클린 아키텍처를 통한 MySQL 데이터베이스 저장 (ID를 0으로 전달)
-      await signupViewModel.registerUser(
-        id: mysqlId,
-        email: email,
-        password: password,
-        name: name,
-        regdate: regdate,
-      );
-
-      final userEntity = await loginUserUseCase.call(email, password);
+      final userEntity = await userViewModel.signup(email, password,name,int.parse(accountNumberString));
 
       if (userEntity != null) {
-        userViewModel.setUser(userEntity);
-        getSpending.setID(userEntity.id);
-        // 5. ✅ MySQL 저장 성공
         CommonDialog.show(
           context,
           title: "회원가입 성공 🎉",
@@ -104,14 +96,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } catch (e) {
       // ⚠️ MySQL 저장 실패 (DataSource에서 던진 Exception 처리)
       String message = "알 수 없는 오류가 발생했습니다.";
-
-      // Exception 메시지에서 구체적인 서버 에러를 추출 (예: 'Exception: MySQL registration failed: 이미 등록된 이메일입니다.')
-      if (e.toString().contains("MySQL registration failed:")) {
+      if (e.toString().contains("User already registered")) {
+        // 서버에서 'email-already-in-use' 또는 '이미 가입된 이메일' 같은 메시지를 반환할 경우
+        message = "이미 사용 중인 이메일입니다. 다른 이메일로 시도해 주세요.";
+      } else if (e.toString().contains("MySQL registration failed:")) {
         message = e.toString().split("MySQL registration failed:").last.trim();
       } else if (e.toString().contains("Server connection error:")) {
         message = "서버 연결에 문제가 발생했습니다. (${e.toString().split(":").last.trim()})";
       } else {
-        print("Raw Error: $e"); // 알 수 없는 오류는 로그로 출력
+        print("Raw Error: $e");
       }
 
       CommonDialog.show(

@@ -1,13 +1,13 @@
 class SpendingEntity {
-  final String id;
-  final int goalAmount;
-  final int spendingAmount;
-  final int spendType;
+  final String uid;
+  final int goal;
+  final int spending;
+  final int type;
 
   SpendingEntity({
-    required this.id,
-    required this.goalAmount,
-    required this.spendingAmount,
-    required this.spendType
+    required this.uid,
+    required this.goal,
+    required this.spending,
+    required this.type
   });
 }

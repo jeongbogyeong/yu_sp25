@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../domain/usecases/get_spending.dart';
-import '../../domain/usecases/fetch_spending.dart';
+import 'package:smartmoney/domain/usecases/stat_user.dart';
 import '../../domain/entities/spending_entitiy.dart';
 
-class SpendingViewModel with ChangeNotifier {
-  final GetSpending getSpendingUseCase;
-  final FetchSpending fetchSpendingUseCase;
+class StatViewModel with ChangeNotifier {
+  final StatUser statUseCase;
 
-  SpendingViewModel(this.getSpendingUseCase, this.fetchSpendingUseCase);
+  StatViewModel(this.statUseCase);
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -35,18 +33,18 @@ class SpendingViewModel with ChangeNotifier {
   // ==================================================
   // loadSpendingData
   // ==================================================
-  Future<void> loadSpendingData(int uid) async {
+  Future<void> loadSpendingData(String uid) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _spendingList = await getSpendingUseCase.call(uid);
+      _spendingList = await statUseCase.getStat(uid);
 
       if (_spendingList!.length>0) {
         for (var s in _spendingList!) {
-          categoryGoals[s.spendType] = s.goalAmount.toDouble();
-          categoryExpenses[s.spendType] = s.spendingAmount.toDouble();
+          categoryGoals[s.type] = s.goal.toDouble();
+          categoryExpenses[s.type] = s.spending.toDouble();
         }
         overallGoal = categoryGoals.values.fold(0.0, (sum, val) => sum + val);
       }
@@ -114,17 +112,17 @@ class SpendingViewModel with ChangeNotifier {
   // ==================================================
   // DB 업데이트
   // ==================================================
-  Future<bool> _updateEntityInDB(int spendType, double goalAmount) async {
-    final entity = _getOrCreateEntity(spendType);
+  Future<bool> _updateEntityInDB(int type, double goal) async {
+    final entity = _getOrCreateEntity(type);
     final updated = SpendingEntity(
-      id: entity.id,
-      goalAmount: goalAmount.round(),
-      spendingAmount: entity.spendingAmount,
-      spendType: spendType,
+      uid: entity.uid,
+      goal: goal.round(),
+      spending: entity.spending,
+      type: type,
     );
 
     try {
-      return await fetchSpendingUseCase.call(updated);
+      return await statUseCase.updateStat(updated);
     } catch (e) {
       _errorMessage = "DB 업데이트 오류: $e";
       return false;
@@ -134,21 +132,22 @@ class SpendingViewModel with ChangeNotifier {
   // ==================================================
   // 엔티티 가져오기 또는 생성
   // ==================================================
-  SpendingEntity _getOrCreateEntity(int spendType) {
+  SpendingEntity _getOrCreateEntity(int type) {
     return _spendingList?.firstWhere(
-          (s) => s.spendType == spendType,
+          (s) => s.type == type,
       orElse: () => SpendingEntity(
-        id: getSpendingUseCase.currentUserId,
-        goalAmount: 0,
-        spendingAmount: 0,
-        spendType: spendType,
+        uid: statUseCase.currentUserId,
+        goal: 0,
+        spending: 0,
+        type: type,
       ),
     ) ??
         SpendingEntity(
-          id: getSpendingUseCase.currentUserId,
-          goalAmount: 0,
-          spendingAmount: 0,
-          spendType: spendType,
+          uid: statUseCase.currentUserId,
+          goal: 0,
+          spending: 0,
+          type: type,
         );
   }
+
 }

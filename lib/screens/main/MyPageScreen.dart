@@ -88,7 +88,7 @@ class MyPageScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vm.currentUser!.name,
+                    vm.user!.name,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -97,7 +97,7 @@ class MyPageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    vm.currentUser!.email,
+                    vm.user!.email,
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],
