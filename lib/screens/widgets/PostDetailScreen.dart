@@ -68,6 +68,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       backgroundColor: _secondaryColor,
       appBar: AppBar(
         title: const Text("게시글 보기"),
+        titleTextStyle: const TextStyle(
+          color: Colors.black87,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
+        leading: const BackButton(
+          color: Colors.black87,
+        ),
         backgroundColor: _secondaryColor,
         elevation: 0,
       ),

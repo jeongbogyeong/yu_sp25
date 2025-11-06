@@ -33,6 +33,7 @@ class StatsScreen extends StatelessWidget {
     return Scaffold(
           backgroundColor: _secondaryColor,
           appBar: AppBar(
+            automaticallyImplyLeading: false,
             title: const Text("통계"),
             backgroundColor: _secondaryColor,
             elevation: 0,

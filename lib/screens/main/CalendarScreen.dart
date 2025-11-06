@@ -86,6 +86,7 @@ class _ExpenseCalendarState extends State<CalendarScreen> {
     return Scaffold(
         backgroundColor: _secondaryColor, // 배경색 통일
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: const Text("지출 캘린더"),
           titleTextStyle: const TextStyle(
               color: Colors.black87,

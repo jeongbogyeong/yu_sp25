@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smartmoney/domain/usecases/stat_user.dart';
 import 'package:smartmoney/screens/viewmodels/StatViewModel.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
+import 'package:smartmoney/service/notification/notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/login/LoginScreen.dart';
@@ -10,7 +11,7 @@ import 'package:intl/date_symbol_data_local.dart';
 // GetIt 및 Provider 관련 import
 import 'package:provider/provider.dart';
 import 'package:get_it/get_it.dart'; // GetIt 임포트
-import 'di_setup.dart'; // DI 설정 파일 임포트
+import 'service/di_setup.dart'; // DI 설정 파일 임포트
 
 
 
@@ -25,6 +26,8 @@ Future<void> main() async {
   //GetIt 초기화 호출
   setupLocator();
 
+  //  알림 서비스 초기화
+  await NotificationService.init();
 
   // 한국어 날짜 포맷
   await initializeDateFormatting('ko_KR');
@@ -45,6 +48,7 @@ Future<void> main() async {
   );
 }
 
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -57,7 +61,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: false,
       ),
-      home: LoginScreen(),
+        home: LoginScreen(),
     );
   }
 }

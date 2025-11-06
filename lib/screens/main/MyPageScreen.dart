@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:smartmoney/screens/login/LoginScreen.dart';
 
 //ViewModel
+import '../../service/notification/notification_service.dart';
 import '../viewmodels/UserViewModel.dart';
-import 'package:provider/provider.dart';
+import '../widgets/NotificationSettingsScreen.dart';
+
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
@@ -24,6 +27,7 @@ class MyPageScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _secondaryColor, // ✨ 배경색 통일
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text("마이페이지"),
         titleTextStyle: const TextStyle(
           color: Colors.black87,
@@ -216,7 +220,7 @@ class MyPageScreen extends StatelessWidget {
       color: Colors.white,
       child: Column(
         children: [
-          _buildMenuTile(context, Icons.category_rounded, "카테고리 관리", () {}),
+          _buildMenuTile(context, Icons.category_rounded, "카테고리 관리",() {}),
           _buildMenuDivider(),
           _buildMenuTile(
             context,
@@ -227,7 +231,11 @@ class MyPageScreen extends StatelessWidget {
           _buildMenuDivider(),
           _buildMenuTile(context, Icons.bar_chart_rounded, "통계 보기", () {}),
           _buildMenuDivider(),
-          _buildMenuTile(context, Icons.settings_rounded, "앱 설정", () {}),
+          _buildMenuTile(context, Icons.notifications, "알림 설정",
+                  () => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const NotificationSettingsScreen())
+              )),
+
           // 텍스트 수정
         ],
       ),

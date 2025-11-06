@@ -46,6 +46,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _secondaryColor, // ✨ 배경색 통일
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text("Nudge_gap"), // ✨ 앱 이름으로 변경
         titleTextStyle: const TextStyle(
           color: Colors.black,

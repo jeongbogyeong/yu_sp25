@@ -4,13 +4,14 @@ import 'package:smartmoney/domain/usecases/stat_user.dart';
 import 'package:smartmoney/screens/ParentPage.dart';
 
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
+import 'package:smartmoney/service/notification/notification_service.dart';
 import 'SignUpScreen.dart';
 //ui위젯
 import 'package:smartmoney/screens/widgets/login_button.dart';
 import 'package:smartmoney/screens/widgets/CommonDialog.dart';
 
 import 'package:provider/provider.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -89,6 +90,67 @@ class _LoginScreenState extends State<LoginScreen> {
         title: "로그인 실패 🚨",
         content: message,
         isSuccess: false,
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _requestNotificationPermissions(); // 알림 권한 요청
+  }
+
+  void _requestNotificationPermissions() async {
+    //알림 권한 요청
+    final status = await NotificationService.requestNotificationPermissions();
+    if (status.isDenied && context.mounted) {
+      showDialog(
+        // 알림 권한이 거부되었을 경우 다이얼로그 출력
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            '알림 권한 요청',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            '알림을 받으려면 앱 설정에서 권한을 허용해야 합니다.',
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: 15,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                '취소',
+                style: TextStyle(
+                  color: Colors.grey, // 회색으로 약하게 처리
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(), // 다이얼로그 닫기
+            ),
+            TextButton(
+              child: const Text(
+                '설정으로 이동',
+                style: TextStyle(
+                  color: primaryColor, // ✨ 강조색 적용
+                  fontWeight: FontWeight.bold, // 강조
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                openAppSettings(); // 권한 설정 화면으로 이동
+              },
+            )
+          ],
+        ),
       );
     }
   }

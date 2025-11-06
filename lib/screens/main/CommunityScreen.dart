@@ -58,6 +58,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return Scaffold(
       backgroundColor: _secondaryColor,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text("커뮤니티"),
         titleTextStyle: const TextStyle(
           color: Colors.black87,
