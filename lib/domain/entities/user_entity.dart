@@ -12,6 +12,4 @@ class UserEntity {
     required this.email,
     required this.account_number,
   });
-
-
 }

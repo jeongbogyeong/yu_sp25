@@ -12,7 +12,4 @@ class UserInfoUser {
   Future<UserEntity?> login(String email, String password) {
     return repository.login(email, password);
   }
-/*  Future<UserEntity?> update(String uid) async {
-    return await repository.fetchUser(uid);
-  }*/
 }
