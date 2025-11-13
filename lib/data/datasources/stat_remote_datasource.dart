@@ -34,18 +34,27 @@ class StatRemoteDataSource {
     }
   }
 
-  Future<List<SpendingEntity>> _initializeDefaultSpendingGoals(String uid) async {
+
+ 
+
+  Future<List<SpendingEntity>> _initializeDefaultSpendingGoals(
+    String uid,
+  ) async {
+ 
     final List<SpendingEntity> defaultList = List.generate(5, (i) {
       return SpendingEntity(uid: uid, goal: 0, spending: 0, type: i);
     });
 
     // Supabase에 삽입
+
     final insertData = defaultList.map((e) => {
       'uid': e.uid,
       'goal': e.goal,
       'spending': e.spending,
       'type': e.type,
     }).toList();
+
+    
 
     await client.from('spendingGoal_table').insert(insertData);
     return defaultList;
@@ -56,10 +65,17 @@ class StatRemoteDataSource {
       final response = await client
           .from('spendingGoal_table')
           .update({
+
         'goal': spending.goal,
         'spending': spending.spending,
         'type': spending.type,
       })
+
+            'goal': spending.goal,
+            'spending': spending.spending,
+            'type': spending.type,
+          })
+
           .eq('uid', spending.uid)
           .eq('type', spending.type)
           .select();
@@ -70,5 +86,6 @@ class StatRemoteDataSource {
       return false;
     }
   }
+
 
 }
