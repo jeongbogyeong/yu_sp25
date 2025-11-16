@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "558745486025",
+    "project_id": "smartmoney-2d90c",
+    "storage_bucket": "smartmoney-2d90c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:558745486025:android:159f0dac6dcdbe92ff4318",
+        "android_client_info": {
+          "package_name": "com.example.smartmoney"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAL7oZ_Mql6uaX98EYSFtjm6TqushSGAHg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
