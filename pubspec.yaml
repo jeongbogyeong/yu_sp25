@@ -1,45 +1,19 @@
-name: smartmoney
-description: "A new Flutter project."
-
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-
-version: 1.0.0+1
+name: account_book
+description: A personal account book built with Flutter and Supabase
 
 environment:
-  sdk: '>=3.9.0 <4.0.0'
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  fl_chart: ^1.1.1
-  table_calendar: ^3.1.2
-  intl: ^0.20.2
-  cloud_firestore: ^6.0.2
-  firebase_core: ^4.1.1
-  firebase_auth: ^6.1.0
-  another_flushbar: ^1.12.32
-  cupertino_icons: ^1.0.8
-  readsms: ^0.2.0+4
-  permission_handler: ^12.0.1
-  dio: ^5.3.3
-  bootpay_api: 1.0.4
 
+  supabase_flutter: ^2.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
 
-  plugin:
-    platforms:
-      android:
-        package: kr.co.bootpay.bootpay_api
-        pluginClass: BootpayApiPlugin
-
-  assets:
-    - assets/images/google.png
-    - assets/images/naver.png
-    - assets/images/kakao.png

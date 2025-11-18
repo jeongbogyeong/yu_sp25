@@ -1,55 +1,34 @@
 import 'package:flutter/material.dart';
-import 'db.dart';
-import 'models.dart';
-import 'seeds.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'entry_page.dart';
 
-void main() async {
-  await DB.init();
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  if(DB.transactions.isEmpty){
-    await seedSampleData(months: 3, perMonth: 120);
-  }
-  runApp(const MyApp());
+  await Supabase.initialize(
+    url: 'https://fgqreknznpqdecmpmjsc.supabase.co',   //  SUPABASE URL
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncXJla256bnBxZGVjbXBtanNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzOTI1ODQsImV4cCI6MjA3ODk2ODU4NH0.71c8aRhJWxept9ipH5ckhpOAAYxUXSJtqzznTqlvZpU',                     //  SUPABASE ANON KEY
+  );
+
+  runApp(const AccountBookApp());
 }
+final suoabase = Supabase.instance.client;
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  @override Widget build(BuildContext context) {
+class AccountBookApp extends StatelessWidget {
+  const AccountBookApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
-      home: const HomePage(),
+      title: 'Account Book',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+      ),
+      home: const EntryPage(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-  @override Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('가계부')),
-      body: Center(
-        child: FilledButton(
-          onPressed: () async {
-            final now = DateTime.now();
-            final tx = MoneyTx(
-              id: '${now.millisecondsSinceEpoch}',
-              categoryId: 'exp:food',
-              amount: 12000,
-              memo: '테스트 점심',
-              occurredAt: now,
-              createdAt: now,
-              accountId: 'cash',
-            );
-            await DB.transactions.put(tx.id, tx);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('저장 완료')),
-              );
-            }
-          },
-          child: const Text('거래 1건 저장'),
-        ),
-      ),
-    );
-  }
-}
 
