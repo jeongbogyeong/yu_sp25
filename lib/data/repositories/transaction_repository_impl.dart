@@ -13,7 +13,12 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
-  Future<bool> insertTransaction(TransactionEntity transaction){
+  Future<TransactionEntity?> insertTransaction(TransactionEntity transaction){
     return remoteDataSource.insertTransaction(transaction);
+  }
+
+  @override
+  Future<bool> deleteTransaction(int id){
+    return remoteDataSource.deleteTransaction(id);
   }
 }

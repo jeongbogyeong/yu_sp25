@@ -1,6 +1,8 @@
 import 'package:smartmoney/domain/entities/user_entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../domain/entities/user_entity.dart';
+
 class UserRemoteDataSource {
   final SupabaseClient client;
   UserRemoteDataSource(this.client);

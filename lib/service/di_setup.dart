@@ -5,19 +5,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // ✅ 도메인 및 데이터 레이어 import
 import '../data/datasources/stat_remote_datasource.dart';
 import '../data/datasources/user_remote_datasource.dart';
+import '../data/datasources/transaction_romote_datasource.dart';
+
 import '../data/repositories/stat_repository_impl.dart';
 import '../data/repositories/user_repository_impl.dart';
+import '../data/repositories/transaction_repository_impl.dart';
+
 import '../domain/repositories/stat_repository.dart';
-import '../domain/repositories/user_repository.dart'; // UserRepository (추상 클래스)
+import '../domain/repositories/user_repository.dart';
+import '../domain/repositories/transaction_repository.dart';
 
 // UseCase
 import '../domain/usecases/userInfo_user.dart';
 import '../domain/usecases/stat_user.dart';
+import '../domain/usecases/transaction_user.dart';
 
 // ✅ 뷰모델 import
 
 import '../screens/viewmodels/UserViewModel.dart';
 import '../screens/viewmodels/StatViewModel.dart';
+import '../screens/viewmodels/TransactionViewModel.dart';
 // GetIt 인스턴스를 전역으로 사용하기 위해 선언
 final locator = GetIt.instance;
 
@@ -28,11 +35,17 @@ void setupLocator() {
           () => UserRemoteDataSource(client));
   locator.registerLazySingleton<StatRemoteDataSource>(
           () => StatRemoteDataSource(client));
+  locator.registerLazySingleton<TransactionRomoteDatasource>(
+          () => TransactionRomoteDatasource(client));
 
   locator.registerLazySingleton<UserRepository>(
           () => UserRepositoryImpl(locator<UserRemoteDataSource>()));
   locator.registerLazySingleton<StatRepository>(
           () => StatRepositoryImpl(locator<StatRemoteDataSource>()));
+  locator.registerLazySingleton<TransactionRepository>(
+          () => TransactionRepositoryImpl(locator<TransactionRomoteDatasource>()));
+
+
   //#endregion
 
   //#region Domain Layer
@@ -41,6 +54,9 @@ void setupLocator() {
 
   locator.registerLazySingleton<StatUser>(
           () => StatUser(locator<StatRepository>()));
+
+  locator.registerLazySingleton<TransactionUser>(
+          () => TransactionUser(locator<TransactionRepository>()));
   //#endregion
 
   //#region Presentation Layer - ViewModels
@@ -49,5 +65,8 @@ void setupLocator() {
 
   locator.registerLazySingleton<StatViewModel>(
           () => StatViewModel(locator<StatUser>()));
+
+  locator.registerLazySingleton<TransactionViewModel>(
+          () => TransactionViewModel(locator<TransactionUser>()));
   //#endregion
 }

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // _ThousandsFormatter를 위해 필요
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../domain/entities/transaction_entity.dart';
+import '../viewmodels/TransactionViewModel.dart';
+import '../viewmodels/UserViewModel.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 수입 강조 (녹색 계열)
@@ -34,6 +39,11 @@ const Map<int, Map<String, dynamic>> transactionTypes = {
   16: {'name': '기타(수입)', 'icon': Icons.attach_money, 'isExpense': false, 'color': Color(0xFF9CCC65)},
 };
 
+const Map<int, String> paymentMethods = {
+  0: '현금',
+  1: '카드',
+  2: '계좌이체',
+};
 
 class TransactionDetailScreen extends StatefulWidget {
   final List<Map<String, dynamic>> initialTransactions;
@@ -51,12 +61,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   // ✅ 스크롤 컨트롤러 추가
   final ScrollController _scrollController = ScrollController();
-  late TransactionDetailViewModel _viewModel;
-
+  bool _isEditing = false;
   @override
   void initState() {
     super.initState();
-    _viewModel = TransactionDetailViewModel(widget.initialTransactions);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final String currentUserId = Provider.of<UserViewModel>(context, listen: false).user!.id;
+      Provider.of<TransactionViewModel>(context, listen: false).getTransactions(currentUserId);
+    });
   }
 
   // ✅ dispose에서 컨트롤러 해제
@@ -64,6 +76,27 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // ----------------------------------------------------
+  // ✅ 2. 삭제 함수 (ViewModel 연결)
+  // ----------------------------------------------------
+  void _deleteTransaction(TransactionEntity transaction) async {
+    final viewModel = Provider.of<TransactionViewModel>(context, listen: false);
+
+    final bool success = await viewModel.deleteTransaction(transaction.id);
+
+    if (success) {
+      //final String currentUserId = Provider.of<UserViewModel>(context, listen: false).user!.id;
+      //await viewModel.getTransactions(currentUserId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('거래 내역이 삭제되었습니다.'), duration: Duration(seconds: 1)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('거래 내역 삭제에 실패했습니다.')),
+      );
+    }
   }
 
   // ----------------------------------------------------
@@ -83,58 +116,95 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         ),
         backgroundColor: _secondaryColor,
         elevation: 0.0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 8.0, bottom: 12.0),
-              child: Text(
-                "전체 거래 내역",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isEditing = !_isEditing; // 상태 토글
+              });
+            },
+            child: Text(
+              _isEditing ? '완료' : '편집',
+              style: TextStyle(
+                color: _primaryColor,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Consumer<TransactionViewModel>( // ✅ Consumer로 ViewModel 구독
+        builder: (context, viewModel, child) {
+          final transactions = viewModel.transactions;
 
-            // 거래 내역 리스트
-            Expanded(
-              child: Card(
-                margin: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 4,
-                color: Colors.white,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: ListView.separated(
-                    // ✅ 스크롤 컨트롤러 연결
-                    controller: _scrollController,
-                    itemCount: _viewModel.transactions.length,
-                    separatorBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Divider(height: 1, thickness: 0.5, color: Colors.grey[200]),
-                    ),
-                    itemBuilder: (context, index) {
-                      final tx = _viewModel.transactions[index];
-                      return _buildTransactionTile(tx);
-                    },
+          if (transactions == null) {
+            // 로딩 중이거나 아직 데이터를 가져오지 못했을 때
+            return const Center(child: CircularProgressIndicator(color: _primaryColor));
+          }
+
+          if (transactions.isEmpty) {
+            return const Center(
+              child: Text("아직 등록된 거래 내역이 없습니다.", style: TextStyle(color: Colors.grey)),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0, bottom: 12.0),
+                  child: Text(
+                    "전체 거래 내역",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                 ),
-              ),
+
+                // 거래 내역 리스트
+                Expanded(
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    color: Colors.white,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: ListView.separated(
+                        controller: _scrollController,
+                        itemCount: transactions.length, // ✅ ViewModel 데이터 사용
+                        separatorBuilder: (context, index) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Divider(height: 1, thickness: 0.5, color: Colors.grey[200]),
+                        ),
+                        itemBuilder: (context, index) {
+                          final tx = transactions[index]; // ✅ TransactionEntity 사용
+                          return _buildTransactionTile(tx);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          );
+        },
       ),
       // FAB (Floating Action Button) 추가
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTransactionForm(context),
-        backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
-        tooltip: '거래 내역 추가',
-        child: const Icon(Icons.add),
+      floatingActionButton: Visibility(
+        visible: !_isEditing,
+        child: FloatingActionButton(
+          onPressed: () => _showAddTransactionForm(context),
+          backgroundColor: _primaryColor,
+          foregroundColor: Colors.white,
+          tooltip: '거래 내역 추가',
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -142,10 +212,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   // ----------------------------------------------------
   // ## 2. 거래 내역 타일 위젯
   // ----------------------------------------------------
-  Widget _buildTransactionTile(Map<String, dynamic> tx) {
-    final amount = tx['amount'] as int;
-    // typeKey가 없는 경우를 대비해 널 안전 처리 및 기본값 설정
-    final typeKey = tx['typeKey'] as int? ?? (amount < 0 ? 0 : 11);
+  Widget _buildTransactionTile(TransactionEntity tx) { // ✅ Map 대신 TransactionEntity 받음
+    final amount = tx.amount;
+    final typeKey = tx.categoryId;
     final isExpense = transactionTypes[typeKey]?['isExpense'] ?? amount < 0;
 
     final formattedAmount = NumberFormat('#,###').format(amount.abs());
@@ -158,9 +227,33 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
     final iconBackgroundColor = color.withOpacity(0.1);
 
+    // ✅ 결제 수단 정보 추가 (paymentMethod는 TransactionEntity에 있어야 함)
+    final paymentKey = tx.assetId;
+    final paymentName = paymentMethods[paymentKey] ?? '알 수 없음';
+
+    IconData paymentIcon;
+    if (paymentKey == 0) {
+      paymentIcon = Icons.money_off; // 현금
+    } else if (paymentKey == 1) {
+      paymentIcon = Icons.credit_card; // 카드
+    } else {
+      paymentIcon = Icons.compare_arrows; // 계좌이체
+    }
+
     return ListTile(
-      // 카테고리 아이콘
-      leading: Container(
+      // ✅ leading: 편집 모드에 따라 아이콘 또는 삭제 버튼 표시
+      leading: _isEditing
+          ? IconButton(
+        icon: const Icon(
+          Icons.remove_circle, // 삭제 버튼 아이콘
+          color: _expenseColor, // 빨간색
+          size: 28,
+        ),
+        onPressed: () => _deleteTransaction(tx), // 삭제 함수 호출
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+      )
+          : Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: iconBackgroundColor,
@@ -179,13 +272,37 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         ),
       ),
 
-      // 메모
-      subtitle: Text(
-        tx['memo'] ?? '메모 없음',
-        style: const TextStyle(
-          color: Colors.grey,
-          fontSize: 13,
-        ),
+      // 메모 및 결제 수단
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tx.memo ?? '메모 없음', // ✅ TransactionEntity 필드 사용
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 13,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                paymentIcon,
+                size: 14,
+                color: Colors.black54,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                paymentName,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
 
       // 금액 및 날짜
@@ -203,7 +320,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            tx['date'],
+            tx.createdAt, // ✅ TransactionEntity 필드 사용
             style: const TextStyle(color: Colors.black54, fontSize: 11),
           ),
         ],
@@ -215,31 +332,39 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   // ## 3. 거래 내역 추가 폼 팝업
   // ----------------------------------------------------
   void _showAddTransactionForm(BuildContext context) {
+    // ViewModel 인스턴스를 미리 가져옵니다.
+    final viewModel = Provider.of<TransactionViewModel>(context, listen: false);
+
     showDialog(
       context: context,
       builder: (ctx) {
-        // ✅ Dialog 위젯을 사용하여 폼을 화면 중앙에 표시
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 10,
-          // SingleChildScrollView로 감싸 키보드가 올라와도 폼이 가려지지 않게 처리
           child: SingleChildScrollView(
             child: AddTransactionForm(
-              onSave: (newTransaction) {
-                // 1. 상태 업데이트 및 내역 추가 (리빌드 예약)
-                setState(() {
-                  _viewModel.addTransaction(newTransaction);
-                });
+              onSave: (newTransaction) async { // ✅ 비동기 처리
+
+                final success = await viewModel.insertTranaction(newTransaction);
 
                 // 2. 팝업 닫기
                 Navigator.pop(ctx);
 
-                // 3. 새로운 거래 내역이 보이도록 리스트 최상단으로 스크롤
-                if (_viewModel.transactions.isNotEmpty) {
-                  _scrollController.animateTo(
-                    0.0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
+                if (success) {
+                  // 3. 성공 시 리스트 최상단으로 스크롤 (ViewModel에서 notifyListeners가 호출되면
+                  //    Consumer가 리빌드되므로 스크롤 이동만 처리)
+                  // List가 비어있지 않다면 (성공적으로 추가되었다면)
+                  if (viewModel.transactions != null && viewModel.transactions!.isNotEmpty) {
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                } else {
+                  // TODO: 실패 시 사용자에게 알림 (예: Snackbar 또는 CommonDialog)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('거래 내역 저장에 실패했습니다.')),
                   );
                 }
               },
@@ -255,7 +380,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 // ✅ 거래 내역 추가 폼 (Bottom Sheet)
 // ****************************************************
 class AddTransactionForm extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSave;
+  final Function(TransactionEntity) onSave;
 
   const AddTransactionForm({super.key, required this.onSave});
 
@@ -267,6 +392,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
   final _formKey = GlobalKey<FormState>();
 
   int? _selectedTypeKey;
+  int? _selectedPaymentMethod;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _memoController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
@@ -275,6 +401,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
   void initState() {
     super.initState();
     _selectedTypeKey = 0; // 초기 선택은 '식비' (키 0)
+    _selectedPaymentMethod = 1; // 초기 선택은 '카드' (키 1)
   }
 
   @override
@@ -319,12 +446,19 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
 
       final finalAmount = isExpense ? -amount.abs() : amount.abs();
 
-      final newTransaction = {
-        'typeKey': _selectedTypeKey!,
-        'amount': finalAmount,
-        'memo': _memoController.text.trim(),
-        'date': DateFormat('yyyy-MM-dd').format(_selectedDate),
-      };
+      // TODO: 사용자 ID는 실제 앱에서는 Auth ViewModel 등에서 가져와야 합니다.
+      final int accountNum = Provider.of<UserViewModel>(context, listen: false).user!.account_number;
+
+      // ✅ TransactionEntity 객체 생성 (Map 대신)
+      final newTransaction = TransactionEntity(
+        id: 0, // DB에서 할당되므로 0으로 설정
+        accountNumber: accountNum,
+        categoryId: _selectedTypeKey!,
+        amount: finalAmount,
+        memo: _memoController.text.trim(),
+        createdAt: DateFormat('yyyy-MM-dd').format(_selectedDate).toString(),
+        assetId: _selectedPaymentMethod!,
+      );
 
       widget.onSave(newTransaction);
     }
@@ -332,6 +466,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (build 메서드 내용 유지) ...
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Form(
@@ -350,6 +485,9 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
             _buildTypeDropdown(),
             const SizedBox(height: 15),
 
+            // ✅ 1-2. 결제 수단 선택 (새로 추가)
+            _buildPaymentDropdown(),
+            const SizedBox(height: 15),
             // 2. 거래액 입력
             TextFormField(
               controller: _amountController,
@@ -406,6 +544,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       ),
     );
   }
+
 
   // 카테고리 드롭다운 위젯
   Widget _buildTypeDropdown() {
@@ -482,6 +621,54 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       ),
     );
   }
+
+  //결제 수단 드롭다운 위젯
+  Widget _buildPaymentDropdown() {
+    return DropdownButtonFormField<int>(
+      value: _selectedPaymentMethod,
+      decoration: const InputDecoration(
+        labelText: '결제 수단',
+        prefixIcon: Icon(Icons.payment),
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+      items: paymentMethods.entries.map((entry) {
+        final key = entry.key;
+        final name = entry.value;
+
+        IconData icon;
+        if (key == 0) {
+          icon = Icons.money_off; // 현금
+        } else if (key == 1) {
+          icon = Icons.credit_card; // 카드
+        } else {
+          icon = Icons.compare_arrows; // 계좌이체
+        }
+
+        return DropdownMenuItem<int>(
+          value: key,
+          child: Row(
+            children: [
+              Icon(icon, color: _primaryColor, size: 20),
+              const SizedBox(width: 10),
+              Text(name, style: const TextStyle(color: Colors.black87)),
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: (int? newValue) {
+        setState(() {
+          _selectedPaymentMethod = newValue;
+        });
+      },
+      validator: (value) {
+        if (value == null) {
+          return '결제 수단을 선택해주세요.';
+        }
+        return null;
+      },
+    );
+  }
 }
 
 
@@ -516,18 +703,3 @@ class _ThousandsFormatter extends TextInputFormatter {
   }
 }
 
-// ****************************************************
-// 임시 데이터 처리 뷰 모델 (DB 대신 내부 메모리 사용)
-// ****************************************************
-class TransactionDetailViewModel {
-  List<Map<String, dynamic>> _transactions;
-
-  TransactionDetailViewModel(this._transactions);
-
-  List<Map<String, dynamic>> get transactions => _transactions;
-
-  void addTransaction(Map<String, dynamic> newTransaction) {
-    // 가장 최근 거래가 맨 위에 오도록 리스트 맨 앞에 추가
-    _transactions.insert(0, newTransaction);
-  }
-}

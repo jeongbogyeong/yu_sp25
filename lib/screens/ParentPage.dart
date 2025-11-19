@@ -53,12 +53,7 @@ class _ParentPageState extends State<ParentPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       statVM = Provider.of<StatViewModel>(context, listen: false);
       await statVM.loadSpendingData(
-
           Provider.of<UserViewModel>(context, listen: false).user!.id);
-
-        Provider.of<UserViewModel>(context, listen: false).user!.id,
-      );
-
     });
   }
 
@@ -66,12 +61,7 @@ class _ParentPageState extends State<ParentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _secondaryColor, // Scaffold 배경색 통일
-
-      
-
-      body: PageView(
-        // SafeArea 제거: PageView는 일반적으로 전체 화면을 사용
-
+      body: PageView( // SafeArea 제거: PageView는 일반적으로 전체 화면을 사용
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(), // 스와이프로 넘기지 못하게 막음
         children: _pages,
@@ -90,7 +80,6 @@ class _ParentPageState extends State<ParentPage> {
 class _CustomBottomNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onTap;
-
 
   const _CustomBottomNavBar({
     required this.selectedIndex,
@@ -120,13 +109,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
 
     _scaleAnimations = _controllers.map((controller) {
       return TweenSequence([
-
-
-        TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 1.15),
-          weight: 50,
-        ), // 스케일 축소
-
+        TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 50), // 스케일 축소
         TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 50),
       ]).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
     }).toList();
@@ -140,11 +123,9 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
     }).toList();
 
     _highlightAnimations = _controllers.map((controller) {
-
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(parent: controller, curve: Curves.easeOut),
       );
-
     }).toList();
   }
 
@@ -179,11 +160,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
           ),
         ],
       ),
-
       child: SafeArea( // 하단 노치 영역으로부터 보호
-
-      
-
         top: false,
         child: SizedBox(
           height: 65, // 높이 고정
@@ -202,11 +179,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
                       final highlightValue = _highlightAnimations[index].value;
 
                       // 애니메이션 색상 (녹색 계열)
-
-                      final Color highlightColor = _primaryColor.withOpacity(
-                        0.1,
-                      );
-
+                      final Color highlightColor = _primaryColor.withOpacity(0.1);
 
                       return Center(
                         child: Stack(
@@ -215,11 +188,7 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
                             // ✨ 하이라이트 박스 (녹색으로 변경)
                             if (_controllers[index].isAnimating)
                               Opacity(
-
-                               
-                                opacity:
-                                    1 - highlightValue, // 애니메이션이 진행될수록 투명해짐
-
+                                opacity: 1 - highlightValue, // 애니메이션이 진행될수록 투명해짐
                                 child: Container(
                                   width: 50 + 20 * highlightValue,
                                   height: 50 + 20 * highlightValue,
@@ -250,25 +219,16 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
                                   children: [
                                     Icon(
                                       _getIcon(index),
-
-                                      color: isSelected
-                                          ? _primaryColor
-                                          : Colors
-                                                .grey[600], // ✨ 선택 시 primaryColor 적용
-                                      size: isSelected
-                                          ? 26
-                                          : 24, // 선택 시 아이콘 크기 약간 키우기
-
+                                      color: isSelected ? _primaryColor : Colors.grey[600], // ✨ 선택 시 primaryColor 적용
+                                      size: isSelected ? 26 : 24, // 선택 시 아이콘 크기 약간 키우기
                                     ),
                                     const SizedBox(height: 2), // 간격 줄임
                                     Text(
                                       _getLabel(index),
                                       style: TextStyle(
                                         fontSize: 11, // 폰트 크기 고정
-
                                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                         color: isSelected ? _primaryColor : Colors.grey[600], // ✨ 선택 시 primaryColor 적용
-
                                       ),
                                     ),
                                   ],
@@ -322,6 +282,4 @@ class _CustomBottomNavBarState extends State<_CustomBottomNavBar>
         return "";
     }
   }
-
 }
-
