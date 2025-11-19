@@ -34,7 +34,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUp() async {
 
     if (!_formKey.currentState!.validate()) {
-     // print("폼 유효성 검사");
+      // print("폼 유효성 검사");
       return;
     }
 
@@ -51,53 +51,60 @@ class _SignUpScreenState extends State<SignUpScreen> {
         content: "비밀번호와 비밀번호 확인 값이 일치하지 않습니다.",
         isSuccess: false,
       );
-      return; // 불일치 시 사용자에게 알림 후 종료
+      return;
     }
 
-    if (accountNumberString.isNotEmpty && int.tryParse(accountNumberString) == null) {
+    // 계좌번호 필수가 아니므로, 비어있으면 0으로 파싱하고 아니면 입력값을 파싱합니다.
+    final accountNumberInt = accountNumberString.isEmpty
+        ? 0
+        : (int.tryParse(accountNumberString) ?? 0);
+
+    if (accountNumberString.isNotEmpty && accountNumberInt == 0 && accountNumberString != '0') {
       CommonDialog.show(
         context,
         title: "회원가입 실패 🚨",
         content: "계좌번호는 숫자만 입력해야 합니다.",
         isSuccess: false,
       );
-      return; // 숫자 검사 실패 시 사용자에게 알림 후 종료
+      return;
     }
 
 
-
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-    //final getSpending = Provider.of<GetSpending>(context, listen: false);
-    // 로딩 상태 표시 (필요시)
 
     try {
-
-      final userEntity = await userViewModel.signup(email, password,name,int.parse(accountNumberString));
+      // int.parse() 대신 이미 숫자로 변환된 accountNumberInt를 사용합니다.
+      final userEntity = await userViewModel.signup(email, password, name, accountNumberInt);
 
       if (userEntity != null) {
-        CommonDialog.show(
+
+        // 1. ✅ 먼저 화면을 ParentPage로 교체하여 이동시킵니다. (자동 이동)
+        Navigator.pushReplacement(
           context,
-          title: "회원가입 성공 🎉",
-          content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
-          isSuccess: true,
-          onConfirmed: () {
-            // 성공 시 로그인 화면으로 이동하는 것이 일반적이지만,
-            // 기존 코드와 같이 ParentPage로 이동하도록 유지합니다.
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const ParentPage()),
-            );
-          },
+          MaterialPageRoute(builder: (context) => const ParentPage()),
         );
-      }else {
-        // UseCase에서 null을 반환했지만 Exception이 발생하지 않은 경우
+
+        // 2. ✅ 화면 이동 후 다음 프레임(microtask)에서 팝업을 띄웁니다.
+        Future.microtask(() {
+          if (!mounted) return;
+
+          CommonDialog.show(
+            context,
+            title: "회원가입 성공 🎉",
+            content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
+            isSuccess: true,
+            // 화면이 이미 이동했으므로, onConfirmed는 팝업을 닫는 역할만 수행합니다.
+            onConfirmed: () {},
+          );
+        });
+
+      } else {
         throw Exception("Authentication failed, user data not returned.");
       }
     } catch (e) {
-      // ⚠️ MySQL 저장 실패 (DataSource에서 던진 Exception 처리)
+      // ⚠️ 에러 처리 로직은 변경 없음
       String message = "알 수 없는 오류가 발생했습니다.";
-      if (e.toString().contains("User already registered")) {
-        // 서버에서 'email-already-in-use' 또는 '이미 가입된 이메일' 같은 메시지를 반환할 경우
+      if (e.toString().contains("User already registered") || e.toString().contains("email-already-in-use")) {
         message = "이미 사용 중인 이메일입니다. 다른 이메일로 시도해 주세요.";
       } else if (e.toString().contains("MySQL registration failed:")) {
         message = e.toString().split("MySQL registration failed:").last.trim();

@@ -6,23 +6,33 @@ class UserRemoteDataSource {
   UserRemoteDataSource(this.client);
 
   Future<UserEntity?> login(String email, String password) async {
-    final response =await client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
-    final user = response.user;
-    if(user!=null){
-      final data = await client.from('userInfo_table').select().eq('uid', user.id).maybeSingle();
-      if (data == null) return null;
-
-      return UserEntity(
-        id: data['uid'],
-        name: data['name'],
-        email: data['email'],
-        account_number: data['account_number']
+    try{
+      final response =await client.auth.signInWithPassword(
+        email: email,
+        password: password,
       );
+      final user = response.user;
+
+      if (user == null) {
+        throw Exception("로그인 실패: Supabase가 user를 반환하지 않았습니다.");
+      }else{
+        if(user!=null){
+          final data = await client.from('userInfo_table').select().eq('uid', user.id).maybeSingle();
+          if (data == null) return null;
+
+          return UserEntity(
+              id: data['uid'],
+              name: data['name'],
+              email: data['email'],
+              account_number: data['accountNumber']
+          );
+        }
+      }
+    }catch(e){
+      print("로그인 에러 발생: $e");
+      rethrow;
     }
-    return null;
+
   }
 
   Future<UserEntity?> signup({
@@ -52,7 +62,7 @@ class UserRemoteDataSource {
         'uid': uid,
         'name': name,
         'email': email,
-        'account_number': accountNumber,
+        'accountNumber': accountNumber,
       });
 
       return UserEntity(

@@ -1,4 +1,3 @@
-import 'package:smartmoney/domain/entities/user_entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/entities/spending_entitiy.dart';
 
@@ -35,7 +34,7 @@ class StatRemoteDataSource {
   }
 
   Future<List<SpendingEntity>> _initializeDefaultSpendingGoals(String uid) async {
-    final List<SpendingEntity> defaultList = List.generate(5, (i) {
+    final List<SpendingEntity> defaultList = List.generate(11, (i) {
       return SpendingEntity(uid: uid, goal: 0, spending: 0, type: i);
     });
 
@@ -70,5 +69,4 @@ class StatRemoteDataSource {
       return false;
     }
   }
-
 }

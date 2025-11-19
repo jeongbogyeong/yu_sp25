@@ -40,8 +40,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => locator<StatViewModel>()),
 
         // 🚀 3. FetchUser UseCase (일반 Provider)
-        Provider<StatUser>(create: (_) => locator<StatUser>()),
-
+        Provider<StatUser>(create: (_) => locator<StatUser>()), 
       ],
       child: const MyApp(),
     ),
