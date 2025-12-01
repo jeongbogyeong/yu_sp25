@@ -1,3 +1,4 @@
+/*
 import 'package:dio/dio.dart';
 
 final Dio dio = Dio(
@@ -7,3 +8,4 @@ final Dio dio = Dio(
     receiveTimeout: const Duration(seconds: 10),
   ),
 );
+*/

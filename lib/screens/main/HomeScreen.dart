@@ -12,32 +12,30 @@ class HomeScreen extends StatelessWidget {
 
   final List<Map<String, dynamic>> _transactions = const [
     {
-      "title": "외식",
+      "typeKey": 0, // 0: 식비 (지출)
       "date": "09/21",
       "amount": -15000,
-      "icon": Icons.restaurant_menu_rounded, // 아이콘 변경
-      "color": Colors.orange,
+      // "title": "외식", ⬅️ 이제 필요 없음
+      // "icon": Icons.restaurant_menu_rounded,
+      // "color": Colors.orange,
     },
     {
-      "title": "교통",
+      "typeKey": 1, // 1: 교통/차량 (지출)
       "date": "09/20",
       "amount": -1250,
-      "icon": Icons.directions_bus_filled_rounded, // 아이콘 변경
-      "color": Colors.blue,
+      // ...
     },
     {
-      "title": "급여",
+      "typeKey": 11, // 11: 월급 (수입)
       "date": "09/20",
       "amount": 2000000,
-      "icon": Icons.work_rounded, // 아이콘 변경
-      "color": _primaryColor, // 수입은 primaryColor 사용
+      // ...
     },
     {
-      "title": "마트",
+      "typeKey": 3, // 3: 마트/편의점 (지출)
       "date": "09/19",
       "amount": -55000,
-      "icon": Icons.shopping_basket_rounded,
-      "color": Colors.redAccent,
+      // ...
     },
   ];
 
@@ -99,7 +97,7 @@ class HomeScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              TransactionDetailScreen(transactions: _transactions),
+                              TransactionDetailScreen(initialTransactions: _transactions),
                         ),
                       );
                     },
@@ -301,18 +299,31 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ----------------------------------------------------
-  // ✅ 5. 최근 거래 카드 (Recent Transaction Card)
-  // ----------------------------------------------------
+
+// ----------------------------------------------------
+// ✅ 5. 최근 거래 카드 (Recent Transaction Card)
+// ----------------------------------------------------
   Widget _RecentTransactionCard() {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // ✨ 모서리 둥글게
-      elevation: 4, // ✨ 그림자 강화
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
       color: Colors.white,
       child: Column(
         children: _transactions.take(3).map((tx) {
-          final isExpense = tx['amount'] < 0;
-          final amountText = "${tx['amount'] > 0 ? '+' : ''}${tx['amount'].abs().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}원"; // ✨ 쉼표 포맷 추가
+          final amount = tx['amount'] as int;
+          final isExpense = amount < 0;
+
+          // 1. typeKey를 가져와 기본값 처리 (HomeScreen은 typeKey 필수가 아니었으므로 안전하게 처리)
+          final typeKey = tx['typeKey'] as int? ?? (isExpense ? 0 : 11);
+
+          // 2. TransactionDetailScreen의 상수 Map을 참조할 수 없으므로,
+          //    간단한 기본 색상/아이콘 로직을 사용하거나,
+          //    해당 상수를 HomeScreen으로 가져와야 합니다.
+          //    (여기서는 간단한 로직으로 처리합니다.)
+          final primaryColor = isExpense ? Colors.redAccent : _primaryColor;
+          final iconData = tx['icon'] as IconData? ?? (isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline);
+
+          final amountText = "${amount > 0 ? '+' : ''}${amount.abs().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}원";
 
           return Column(
             children: [
@@ -320,13 +331,15 @@ class HomeScreen extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: tx['color'].withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10), // ✨ 아이콘 배경 둥글게
+                    // ✅ 오류 수정: primaryColor를 사용하여 아이콘 배경색 지정
+                    color: primaryColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(tx['icon'], color: tx['color'], size: 28),
+                  // ✅ 오류 수정: primaryColor를 사용하여 아이콘 색상 지정
+                  child: Icon(iconData, color: primaryColor, size: 28),
                 ),
                 title: Text(
-                  tx['title'],
+                  tx['title'] as String? ?? (isExpense ? '지출' : '수입'), // title이 없으면 기본값 사용
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
                 subtitle: Text(
@@ -337,7 +350,7 @@ class HomeScreen extends StatelessWidget {
                   amountText,
                   style: TextStyle(
                     fontSize: 16,
-                    color: isExpense ? Colors.redAccent : _primaryColor, // ✨ 지출/수입 색상 통일
+                    color: primaryColor, // 지출/수입 색상 통일
                     fontWeight: FontWeight.bold,
                   ),
                 ),

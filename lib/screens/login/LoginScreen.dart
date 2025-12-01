@@ -30,8 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
   static const Color primaryColor = Color(0xFF4CAF50); // 가계부에 어울리는 녹색 계열
   static const Color secondaryColor = Color(0xFFF0F4F8); // 밝은 배경색
 
-
-
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -48,38 +46,46 @@ class _LoginScreenState extends State<LoginScreen> {
       final userEntity = await userViewModel.login(email, password);
       if (userEntity != null) {
         statUserCase.setID(userEntity.id);
-        CommonDialog.show(
+
+        // 1. ✅ 먼저 화면을 ParentPage로 교체하여 이동시킵니다. (자동 이동)
+        Navigator.pushReplacement(
           context,
-          title: "로그인 성공 🎉",
-          content: "${userEntity.name}님, Nudge_gap 오신 것을 환영합니다!",
-          isSuccess: true,
-          onConfirmed: () async {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const ParentPage()),
-            );
-          },
+          MaterialPageRoute(builder: (context) => const ParentPage()),
         );
+
+        // 2. ✅ 화면 이동 후 다음 프레임(microtask)에서 팝업을 띄웁니다.
+        // 이 방법은 새 화면 위에서 팝업이 표시되도록 하는 일반적인 Flutter 방식입니다.
+        Future.microtask(() {
+          // `pushReplacement`로 인해 현재 context는 곧 제거되지만,
+          // 이 시점에는 새 화면이 빌드되어 팝업을 띄울 수 있는 경우가 많습니다.
+          if (!mounted) return; // 안전을 위한 체크
+
+          CommonDialog.show(
+            context,
+            title: "로그인 성공 🎉",
+            content: "${userEntity.name}님, Nudge_gap 오신 것을 환영합니다!",
+            isSuccess: true,
+            // 화면이 이미 이동했으므로, onConfirmed는 팝업을 닫는 역할만 수행합니다.
+            onConfirmed: () {},
+          );
+        });
+
       } else {
-        // UseCase에서 null을 반환했지만 Exception이 발생하지 않은 경우
         throw Exception("Authentication failed, user data not returned.");
       }
     } catch (e) {
-      // ⚠️ UseCase, Repository, DataSource에서 발생한 모든 Exception을 여기서 처리
+      // ⚠️ 에러 처리 로직은 변경 없음
       String message = "알 수 없는 오류가 발생했습니다.";
 
       if (e.toString().contains("Invalid login credentials") || e.toString().contains("Invalid email or password")) {
         message = "이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.";
       }
-      // 사용자 존재하지 않음 (이메일 오타 또는 미가입)
       else if (e.toString().contains("User not found") || e.toString().contains("user-not-found")) {
         message = "해당 이메일로 등록된 사용자가 없습니다. 회원가입이 필요합니다.";
       }
-      // 계정 비활성화 (관리자에 의해 정지된 경우)
       else if (e.toString().contains("User disabled") || e.toString().contains("user-disabled")) {
         message = "사용이 정지된 계정입니다. 관리자에게 문의하세요.";
       }
-      // 기타 인증 오류
       else {
         print("AuthException: $e");
         message = "인증 서비스 오류: ${e.toString()}";
@@ -93,7 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
-
   @override
   void initState() {
     super.initState();
