@@ -44,8 +44,32 @@ class UserRemoteDataSource {
     required int accountNumber,
   }) async {
     try {
-      final registered = await client.from('userInfo_table').select().eq('email', email).maybeSingle();
-      if(registered!=null) return null;
+      // 1) 이메일 중복 체크
+      final registeredEmail = await client
+          .from('userInfo_table')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
+      print("이메일 중복 : " + registeredEmail.toString());
+      if (registeredEmail != null) {
+        throw Exception("email-already-in-use");
+      }
+
+      // 2) 계좌번호 중복 체크 (0은 예외)
+      if (accountNumber != 0) {
+        final registeredAccount = await client
+            .from('userInfo_table')
+            .select()
+            .eq('accountNumber', accountNumber)
+            .maybeSingle();
+
+
+        if (registeredAccount != null) {
+          throw Exception("account-number-already-in-use");
+        }
+      }
+
+      // 3) Supabase Auth 회원가입
       final response = await client.auth.signUp(
         email: email,
         password: password,
@@ -56,10 +80,9 @@ class UserRemoteDataSource {
         throw Exception("회원가입 실패: Supabase가 user를 반환하지 않았습니다.");
       }
 
-      // 2️⃣ Supabase Auth에서 받은 uid (유저 고유 ID)
       final uid = user.id;
 
-      // 3️⃣ userInfo 테이블에 추가 정보 저장
+      // DB에 정보 삽입
       await client.from('userInfo_table').insert({
         'uid': uid,
         'name': name,
@@ -68,10 +91,12 @@ class UserRemoteDataSource {
       });
 
       return UserEntity(
-          id: uid,
-          name: name,
-          email: email,
-          account_number: accountNumber);
+        id: uid,
+        name: name,
+        email: email,
+        account_number: accountNumber,
+      );
+
     } catch (e) {
       print("회원가입 에러 발생: $e");
       rethrow;

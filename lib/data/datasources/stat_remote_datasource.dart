@@ -14,7 +14,7 @@ class StatRemoteDataSource {
           .select()
           .eq('uid', uid);
 
-      // ✅ 데이터가 없으면 기본 5개 생성
+      // ✅ 데이터가 없으면 기본 11개 생성
       if (result.isEmpty) {
         return await _initializeDefaultSpendingGoals(uid);
       }
@@ -35,7 +35,7 @@ class StatRemoteDataSource {
   }
 
   Future<List<SpendingEntity>> _initializeDefaultSpendingGoals(String uid) async {
-    final List<SpendingEntity> defaultList = List.generate(5, (i) {
+    final List<SpendingEntity> defaultList = List.generate(11, (i) {
       return SpendingEntity(uid: uid, goal: 0, spending: 0, type: i);
     });
 

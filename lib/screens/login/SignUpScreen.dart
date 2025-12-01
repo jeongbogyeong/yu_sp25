@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../viewmodels/TransactionViewModel.dart';
 import '../widgets/CommonDialog.dart';
 import '../../screens/ParentPage.dart';
 
@@ -75,7 +76,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       // int.parse() 대신 이미 숫자로 변환된 accountNumberInt를 사용합니다.
       final userEntity = await userViewModel.signup(email, password, name, accountNumberInt);
-
+      final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
       if (userEntity != null) {
 
         // 1. ✅ 먼저 화면을 ParentPage로 교체하여 이동시킵니다. (자동 이동)
@@ -94,7 +95,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
             isSuccess: true,
             // 화면이 이미 이동했으므로, onConfirmed는 팝업을 닫는 역할만 수행합니다.
-            onConfirmed: () {},
+            onConfirmed: () {
+              transactionViewModel.getTransactions(userEntity.id);
+            },
           );
         });
 
@@ -104,8 +107,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } catch (e) {
       // ⚠️ 에러 처리 로직은 변경 없음
       String message = "알 수 없는 오류가 발생했습니다.";
-      if (e.toString().contains("User already registered") || e.toString().contains("email-already-in-use")) {
+      if (e.toString().contains("email-already-in-use")) {
         message = "이미 사용 중인 이메일입니다. 다른 이메일로 시도해 주세요.";
+      } else if (e.toString().contains("account-number-already-in-use")) {
+        message = "이미 등록된 계좌번호입니다. 다른 계좌번호를 사용하세요.";
       } else if (e.toString().contains("MySQL registration failed:")) {
         message = e.toString().split("MySQL registration failed:").last.trim();
       } else if (e.toString().contains("Server connection error:")) {

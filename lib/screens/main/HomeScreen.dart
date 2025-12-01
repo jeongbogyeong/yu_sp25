@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../domain/entities/transaction_entity.dart';
+import '../viewmodels/TransactionViewModel.dart';
 import '../widgets/TransactionDetailScreen.dart';
 
 
@@ -10,112 +14,97 @@ const Color _secondaryColor = Color(0xFFF0F4F8); // 밝은 배경색
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  final List<Map<String, dynamic>> _transactions = const [
-    {
-      "typeKey": 0, // 0: 식비 (지출)
-      "date": "09/21",
-      "amount": -15000,
-      // "title": "외식", ⬅️ 이제 필요 없음
-      // "icon": Icons.restaurant_menu_rounded,
-      // "color": Colors.orange,
-    },
-    {
-      "typeKey": 1, // 1: 교통/차량 (지출)
-      "date": "09/20",
-      "amount": -1250,
-      // ...
-    },
-    {
-      "typeKey": 11, // 11: 월급 (수입)
-      "date": "09/20",
-      "amount": 2000000,
-      // ...
-    },
-    {
-      "typeKey": 3, // 3: 마트/편의점 (지출)
-      "date": "09/19",
-      "amount": -55000,
-      // ...
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _secondaryColor, // ✨ 배경색 통일
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text("Nudge_gap"), // ✨ 앱 이름으로 변경
-        titleTextStyle: const TextStyle(
-          color: Colors.black,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-        backgroundColor: _secondaryColor,
-        elevation: 0.0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: Colors.black54),
-            onPressed: () {
-              // 알림 기능
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _GreetingCard(), // ✅ 인사말 카드
-            const SizedBox(height: 16),
+    return Consumer<TransactionViewModel>(
+      builder: (context, transactionViewModel, child) {
+        final transactions = transactionViewModel.transactions ?? [];
 
-            _SummationCard(), // ✅ 수입/지출/잔액
-            const SizedBox(height: 16),
-
-            _GoalCard(context), // ✅ 목표 예산
-            const SizedBox(height: 20),
-
-            _CategorySummaryCard(), // ✅ 카테고리 요약
-            const SizedBox(height: 20),
-
-            // ----------------------------------------------------
-            // 최근 거래 섹션 제목
-            // ----------------------------------------------------
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "최근 거래",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              TransactionDetailScreen(initialTransactions: _transactions),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: _primaryColor),
-                    label: const Text(
-                        "전체 내역",
-                        style: TextStyle(color: _primaryColor, fontWeight: FontWeight.bold)
-                    ),
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                  ),
-                ],
-              ),
+        return Scaffold(
+          backgroundColor: _secondaryColor, // ✨ 배경색 통일
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: const Text("Nudge_gap"),
+            // ✨ 앱 이름으로 변경
+            titleTextStyle: const TextStyle(
+              color: Colors.black,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
             ),
-            _RecentTransactionCard(),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+            backgroundColor: _secondaryColor,
+            elevation: 0.0,
+            actions: [
+              IconButton(
+                icon: const Icon(
+                    Icons.notifications_none_rounded, color: Colors.black54),
+                onPressed: () {
+                  // 알림 기능
+                },
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _GreetingCard(), // ✅ 인사말 카드
+                const SizedBox(height: 16),
+
+                _SummationCard(), // ✅ 수입/지출/잔액
+                const SizedBox(height: 16),
+
+                _GoalCard(context), // ✅ 목표 예산
+                const SizedBox(height: 20),
+
+                _CategorySummaryCard(), // ✅ 카테고리 요약
+                const SizedBox(height: 20),
+
+                // ----------------------------------------------------
+                // 최근 거래 섹션 제목
+                // ----------------------------------------------------
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "최근 거래",
+                        style: TextStyle(fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  TransactionDetailScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                            Icons.arrow_forward_ios_rounded, size: 16,
+                            color: _primaryColor),
+                        label: const Text(
+                            "전체 내역",
+                            style: TextStyle(color: _primaryColor,
+                                fontWeight: FontWeight.bold)
+                        ),
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                      ),
+                    ],
+                  ),
+                ),
+                _RecentTransactionCard(transactions: transactions),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -303,27 +292,46 @@ class HomeScreen extends StatelessWidget {
 // ----------------------------------------------------
 // ✅ 5. 최근 거래 카드 (Recent Transaction Card)
 // ----------------------------------------------------
-  Widget _RecentTransactionCard() {
+  Widget _RecentTransactionCard({
+    required List<TransactionEntity> transactions, // TransactionEntity 리스트를 받도록 수정
+  }) {
+    // transactions 리스트가 비어있거나 null이면 처리
+    if (transactions.isEmpty) {
+      return const SizedBox.shrink(); // 아무것도 표시하지 않음
+    }
+
+    // ⭐️ TransactionDetailScreen에서 정의된 상수를 사용합니다.
+    const Color _primaryColor = Color(0xFF4CAF50); // 수입 강조 (녹색 계열)
+    const Color _expenseColor = Color(0xFFEF5350); // 지출 강조 (빨간색 계열)
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
       color: Colors.white,
       child: Column(
-        children: _transactions.take(3).map((tx) {
-          final amount = tx['amount'] as int;
-          final isExpense = amount < 0;
+        // ✅ TransactionEntity 리스트의 처음 3개 항목만 사용
+        children: transactions.take(3).map((tx) {
+          final amount = tx.amount;
+          final typeKey = tx.categoryId; // TransactionEntity에서 categoryId 사용
 
-          // 1. typeKey를 가져와 기본값 처리 (HomeScreen은 typeKey 필수가 아니었으므로 안전하게 처리)
-          final typeKey = tx['typeKey'] as int? ?? (isExpense ? 0 : 11);
+          // 1. 거래 타입 정보 조회
+          final typeInfo = transactionTypes[typeKey];
+          final isExpense = typeInfo?['isExpense'] as bool? ?? (amount < 0);
 
-          // 2. TransactionDetailScreen의 상수 Map을 참조할 수 없으므로,
-          //    간단한 기본 색상/아이콘 로직을 사용하거나,
-          //    해당 상수를 HomeScreen으로 가져와야 합니다.
-          //    (여기서는 간단한 로직으로 처리합니다.)
-          final primaryColor = isExpense ? Colors.redAccent : _primaryColor;
-          final iconData = tx['icon'] as IconData? ?? (isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline);
+          // 2. 색상, 아이콘, 제목 결정
+          final color = isExpense ? _expenseColor : _primaryColor;
+          // Map에서 아이콘을 가져오고, 없으면 기본 아이콘 사용
+          final iconData = typeInfo?['icon'] as IconData? ??
+              (isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline);
+          // Map에서 이름을 가져오고, 없으면 '지출'/'수입' 기본값 사용
+          final title = typeInfo?['name'] as String? ?? (isExpense ? '지출' : '수입');
 
-          final amountText = "${amount > 0 ? '+' : ''}${amount.abs().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}원";
+          // 3. 금액 텍스트 포맷
+          final formattedAmount = NumberFormat('#,###').format(amount.abs());
+          final amountText = "${isExpense ? '-' : '+'}$formattedAmount원";
+
+          // 4. 아이콘 배경색
+          final iconBackgroundColor = color.withOpacity(0.15);
 
           return Column(
             children: [
@@ -331,34 +339,33 @@ class HomeScreen extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    // ✅ 오류 수정: primaryColor를 사용하여 아이콘 배경색 지정
-                    color: primaryColor.withOpacity(0.15),
+                    color: iconBackgroundColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  // ✅ 오류 수정: primaryColor를 사용하여 아이콘 색상 지정
-                  child: Icon(iconData, color: primaryColor, size: 28),
+                  child: Icon(iconData, color: color, size: 28),
                 ),
                 title: Text(
-                  tx['title'] as String? ?? (isExpense ? '지출' : '수입'), // title이 없으면 기본값 사용
+                  title, // 카테고리 이름 사용
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
                 subtitle: Text(
-                  tx['date'],
+                  tx.createdAt, // TransactionEntity에서 createdAt 사용
                   style: const TextStyle(color: Colors.grey),
                 ),
                 trailing: Text(
                   amountText,
                   style: TextStyle(
                     fontSize: 16,
-                    color: primaryColor, // 지출/수입 색상 통일
+                    color: color, // 지출/수입 색상 적용
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 onTap: () {
-                  // 거래 상세 화면으로 이동
+                  // TODO: 거래 상세 화면으로 이동 로직 추가
                 },
               ),
-              if (tx != _transactions.take(3).last) const Padding(
+              // ✅ 마지막 항목이 아닌 경우에만 Divider 표시
+              if (tx != transactions.take(3).lastOrNull) const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Divider(height: 1, thickness: 0.5),
               ),
