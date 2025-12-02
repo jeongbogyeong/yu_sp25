@@ -12,6 +12,15 @@ import '../data/repositories/community_repository_impl.dart';
 import '../domain/repositories/stat_repository.dart';
 import '../domain/repositories/user_repository.dart'; // UserRepository (추상 클래스)
 import '../domain/repositories/community_repository.dart';
+import '../data/datasources/transaction_romote_datasource.dart';
+
+import '../data/repositories/stat_repository_impl.dart';
+import '../data/repositories/user_repository_impl.dart';
+import '../data/repositories/transaction_repository_impl.dart';
+
+import '../domain/repositories/stat_repository.dart';
+import '../domain/repositories/user_repository.dart';
+import '../domain/repositories/transaction_repository.dart';
 
 // UseCase
 import '../domain/usecases/userInfo_user.dart';
@@ -26,11 +35,13 @@ import '../data/usecases/add_comment_usecase.dart';
 import '../data/usecases/delete_comment_usecase.dart';
 import '../data/usecases/toggle_like_usecase.dart';
 import '../data/usecases/is_liked_usecase.dart';
+import '../domain/usecases/transaction_user.dart';
 
 // ✅ 뷰모델 import
 import '../screens/viewmodels/UserViewModel.dart';
 import '../screens/viewmodels/StatViewModel.dart';
 import '../screens/viewmodels/CommunityViewModel.dart';
+import '../screens/viewmodels/TransactionViewModel.dart';
 // GetIt 인스턴스를 전역으로 사용하기 위해 선언
 final locator = GetIt.instance;
 
@@ -43,6 +54,8 @@ void setupLocator() {
           () => StatRemoteDataSource(client));
   locator.registerLazySingleton<CommunityRemoteDataSource>(
           () => CommunityRemoteDataSource(client));
+  locator.registerLazySingleton<TransactionRomoteDatasource>(
+          () => TransactionRomoteDatasource(client));
 
   locator.registerLazySingleton<UserRepository>(
           () => UserRepositoryImpl(locator<UserRemoteDataSource>()));
@@ -50,6 +63,10 @@ void setupLocator() {
           () => StatRepositoryImpl(locator<StatRemoteDataSource>()));
   locator.registerLazySingleton<CommunityRepository>(
           () => CommunityRepositoryImpl(locator<CommunityRemoteDataSource>()));
+  locator.registerLazySingleton<TransactionRepository>(
+          () => TransactionRepositoryImpl(locator<TransactionRomoteDatasource>()));
+
+
   //#endregion
 
   //#region Domain Layer
@@ -80,6 +97,8 @@ void setupLocator() {
           () => ToggleLikeUseCase(locator<CommunityRepository>()));
   locator.registerLazySingleton<IsLikedUseCase>(
           () => IsLikedUseCase(locator<CommunityRepository>()));
+  locator.registerLazySingleton<TransactionUser>(
+          () => TransactionUser(locator<TransactionRepository>()));
   //#endregion
 
   //#region Presentation Layer - ViewModels
@@ -102,5 +121,7 @@ void setupLocator() {
             toggleLikeUseCase: locator<ToggleLikeUseCase>(),
             isLikedUseCase: locator<IsLikedUseCase>(),
           ));
+  locator.registerLazySingleton<TransactionViewModel>(
+          () => TransactionViewModel(locator<TransactionUser>()));
   //#endregion
 }

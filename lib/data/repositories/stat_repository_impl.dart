@@ -1,5 +1,4 @@
 import '../../domain/entities/spending_entitiy.dart';
-import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/stat_repository.dart';
 import '../datasources/stat_remote_datasource.dart';
 
