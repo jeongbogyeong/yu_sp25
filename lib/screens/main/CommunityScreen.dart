@@ -53,6 +53,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget build(BuildContext context) {
     final viewModel = Provider.of<CommunityViewModel>(context);
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+
     return Scaffold(
       backgroundColor: _secondaryColor,
       appBar: AppBar(
@@ -77,40 +78,40 @@ class _CommunityScreenState extends State<CommunityScreen> {
       body: viewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
           : viewModel.errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        viewModel.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => viewModel.loadPosts(limit: 20),
-                        child: const Text('다시 시도'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    viewModel.errorMessage!,
+                    style: const TextStyle(color: Colors.red),
                   ),
-                )
-              : viewModel.posts.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '아직 게시글이 없습니다.\n첫 게시글을 작성해보세요!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => viewModel.loadPosts(limit: 20),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: viewModel.posts.length,
-                        itemBuilder: (context, index) {
-                          return _buildPostCard(viewModel.posts[index], context);
-                        },
-                      ),
-                    ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => viewModel.loadPosts(limit: 20),
+                    child: const Text('다시 시도'),
+                  ),
+                ],
+              ),
+            )
+          : viewModel.posts.isEmpty
+          ? const Center(
+              child: Text(
+                '아직 게시글이 없습니다.\n첫 게시글을 작성해보세요!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => viewModel.loadPosts(limit: 20),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: viewModel.posts.length,
+                itemBuilder: (context, index) {
+                  return _buildPostCard(viewModel.posts[index], context);
+                },
+              ),
+            ),
 
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -140,9 +141,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
       child: InkWell(
         onTap: () {
           // 게시글 상세 화면으로 이동
-          final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+          final viewModel = Provider.of<CommunityViewModel>(
+            context,
+            listen: false,
+          );
           viewModel.loadPostDetail(post.id);
-          // TODO: PostDetailScreen도 Entity를 받도록 수정 필요
+
+          // 기존 PostDetailScreen이 Map을 받도록 되어 있으니 그대로 전달
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -225,13 +230,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 children: [
                   _buildReactionIcon(
                     Icons.thumb_up_alt_outlined,
-                    post["likes"],
+                    post.likesCount,
                     _primaryColor,
                   ),
                   const SizedBox(width: 15),
                   _buildReactionIcon(
                     Icons.comment_outlined,
-                    post["comments"],
+                    post.commentsCount,
                     Colors.blueGrey,
                   ),
                 ],
@@ -243,7 +248,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  // 좋아요/댓글 아이콘 헬퍼 위젯 (이전과 동일)
+  // 좋아요/댓글 아이콘 헬퍼 위젯
   Widget _buildReactionIcon(IconData icon, int count, Color color) {
     return Row(
       children: [
@@ -267,7 +272,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   void _showPostWriteSheet(BuildContext context) {
     final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-    
+
     String title = '';
     String content = '';
     String category = '자유'; // 기본 카테고리
@@ -347,7 +352,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(viewModel.errorMessage ?? '게시글 작성에 실패했습니다.'),
+                                content: Text(
+                                  viewModel.errorMessage ?? '게시글 작성에 실패했습니다.',
+                                ),
                               ),
                             );
                           }
@@ -385,21 +392,5 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  // ✅ 글 등록 처리 함수
-  void _addPost(String title, String content, String category) {
-    final newPost = {
-      "title": title,
-      "content": content,
-      "user": "현재 사용자", // 실제 사용자 이름으로 대체해야 함
-      "time": "방금 전",
-      "likes": 0,
-      "comments": 0,
-      "category": category,
-    };
-
-    setState(() {
-      // 가장 최근 글이 위에 오도록 목록 맨 앞에 추가
-      _posts.insert(0, newPost);
-    });
-  }
+  // 🔥 예전 Map 기반 로컬 _posts 사용하던 _addPost 는 더 이상 쓰지 않으므로 삭제
 }
