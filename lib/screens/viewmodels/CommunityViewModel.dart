@@ -265,34 +265,16 @@ class CommunityViewModel with ChangeNotifier {
       final postIndex = _posts.indexWhere((p) => p.id == postId);
       if (postIndex != -1) {
         final post = _posts[postIndex];
-        _posts[postIndex] = CommunityPostEntity(
-          id: post.id,
-          title: post.title,
-          content: post.content,
-          authorId: post.authorId,
-          authorName: post.authorName,
-          category: post.category,
-          likesCount: post.likesCount,
+        _posts[postIndex] = post.copyWith(
           commentsCount: post.commentsCount + 1,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
         );
       }
-      
+
       // 선택된 게시글도 업데이트
       if (_selectedPost?.id == postId) {
         final post = _selectedPost!;
-        _selectedPost = CommunityPostEntity(
-          id: post.id,
-          title: post.title,
-          content: post.content,
-          authorId: post.authorId,
-          authorName: post.authorName,
-          category: post.category,
-          likesCount: post.likesCount,
+        _selectedPost = post.copyWith(
           commentsCount: post.commentsCount + 1,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
         );
       }
       
@@ -316,6 +298,29 @@ class CommunityViewModel with ChangeNotifier {
       if (success) {
         // 댓글 목록에서 제거
         _comments.removeWhere((c) => c.id == commentId);
+
+        // ✅ 댓글 수 줄여주기
+      if (_selectedPost != null) {
+        final postIdOfSelected = _selectedPost!.id;
+
+        final postIndex = _posts.indexWhere((p) => p.id == postIdOfSelected);
+        if (postIndex != -1) {
+          final post = _posts[postIndex];
+          _posts[postIndex] = post.copyWith(
+            commentsCount: post.commentsCount > 0
+                ? post.commentsCount - 1
+                : 0,
+          );
+        }
+
+        final post = _selectedPost!;
+        _selectedPost = post.copyWith(
+          commentsCount: post.commentsCount > 0
+              ? post.commentsCount - 1
+              : 0,
+        );
+      }
+
         notifyListeners();
       }
       
@@ -348,37 +353,23 @@ class CommunityViewModel with ChangeNotifier {
       final postIndex = _posts.indexWhere((p) => p.id == postId);
       if (postIndex != -1) {
         final post = _posts[postIndex];
-        _posts[postIndex] = CommunityPostEntity(
-          id: post.id,
-          title: post.title,
-          content: post.content,
-          authorId: post.authorId,
-          authorName: post.authorName,
-          category: post.category,
-          likesCount: isLiked ? post.likesCount + 1 : post.likesCount - 1,
-          commentsCount: post.commentsCount,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
+        _posts[postIndex] = post.copyWith(
+          likesCount: isLiked
+              ? post.likesCount + 1
+              : post.likesCount - 1,
         );
       }
-      
+
       // 선택된 게시글도 업데이트
       if (_selectedPost?.id == postId) {
         final post = _selectedPost!;
-        _selectedPost = CommunityPostEntity(
-          id: post.id,
-          title: post.title,
-          content: post.content,
-          authorId: post.authorId,
-          authorName: post.authorName,
-          category: post.category,
-          likesCount: isLiked ? post.likesCount + 1 : post.likesCount - 1,
-          commentsCount: post.commentsCount,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
+        _selectedPost = post.copyWith(
+          likesCount: isLiked
+              ? post.likesCount + 1
+              : post.likesCount - 1,
         );
       }
-      
+            
       notifyListeners();
       return isLiked;
     } catch (e) {

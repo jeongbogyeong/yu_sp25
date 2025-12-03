@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import 'package:smartmoney/screens/widgets/PostDetailScreen.dart';
 import 'package:smartmoney/screens/viewmodels/CommunityViewModel.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
@@ -26,7 +27,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     super.initState();
     // 화면이 로드될 때 게시글 목록 불러오기
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
       viewModel.loadPosts(limit: 20);
     });
   }
@@ -137,25 +137,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
       color: Colors.white,
       child: InkWell(
         onTap: () {
-          // 게시글 상세 화면으로 이동
-          final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
-          viewModel.loadPostDetail(post.id);
-          // TODO: PostDetailScreen도 Entity를 받도록 수정 필요
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PostDetailScreen(
-                post: {
-                  'id': post.id,
-                  'title': post.title,
-                  'content': post.content,
-                  'user': post.authorName,
-                  'time': _formatTime(post.createdAt),
-                  'likes': post.likesCount,
-                  'comments': post.commentsCount,
-                  'category': post.category,
-                },
-              ),
+              builder: (context) => PostDetailScreen(postId: post.id),
             ),
           );
         },
