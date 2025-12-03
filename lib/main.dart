@@ -8,8 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smartmoney/screens/viewmodels/TransactionViewModel.dart';
 import 'package:smartmoney/service/notification/notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'screens/login/LoginScreen.dart';
+import 'package:smartmoney/screens/login/auth_check_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 // GetIt 및 Provider 관련 import
@@ -65,7 +64,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: false,
       ),
-      home: LoginScreen(),
+      home: const AuthCheckScreen(),
     );
   }
 }
