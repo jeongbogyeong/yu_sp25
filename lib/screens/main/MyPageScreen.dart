@@ -7,6 +7,7 @@ import 'package:smartmoney/screens/login/LoginScreen.dart';
 import '../../service/notification/notification_service.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
+import '../login/PasswordReset.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
@@ -88,11 +89,7 @@ class MyPageScreen extends StatelessWidget {
           CircleAvatar(
             radius: 36,
             backgroundColor: _primaryColor.withOpacity(0.1),
-            child: Icon(
-              Icons.person_rounded,
-              size: 40,
-              color: _primaryColor,
-            ),
+            child: Icon(Icons.person_rounded, size: 40, color: _primaryColor),
           ),
           const SizedBox(width: 16),
           Consumer<UserViewModel>(
@@ -130,9 +127,7 @@ class MyPageScreen extends StatelessWidget {
   Widget _buildSummaryCard() {
     return Card(
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
       color: Colors.white,
       child: Padding(
@@ -249,28 +244,18 @@ class MyPageScreen extends StatelessWidget {
       color: Colors.white,
       child: Column(
         children: [
-          _buildMenuTile(
-            context,
-            Icons.lock_reset_rounded,
-            "비밀번호 재설정",
-            () {
-              // 아직 화면 없으니까 일단 안내만
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("비밀번호 재설정 화면은 아직 준비 중입니다.")),
-              );
-            },
-          ),
+          _buildMenuTile(context, Icons.lock_reset_rounded, "비밀번호 재설정", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PasswordResetScreen()),
+            );
+          }),
           _buildMenuDivider(),
-          _buildMenuTile(
-            context,
-            Icons.person_outline_rounded,
-            "프로필 수정",
-            () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("프로필 수정 화면은 아직 준비 중입니다.")),
-              );
-            },
-          ),
+          _buildMenuTile(context, Icons.person_outline_rounded, "프로필 수정", () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("프로필 수정 화면은 아직 준비 중입니다.")),
+            );
+          }),
           _buildMenuDivider(),
           _buildMenuTile(
             context,
@@ -302,14 +287,9 @@ class MyPageScreen extends StatelessWidget {
       color: Colors.white,
       child: Column(
         children: [
-          _buildMenuTile(
-            context,
-            Icons.comment_rounded,
-            "내가 쓴 댓글",
-            () {
-              // TODO: 내가 쓴 댓글 목록 화면 이동
-            },
-          ),
+          _buildMenuTile(context, Icons.comment_rounded, "내가 쓴 댓글", () {
+            // TODO: 내가 쓴 댓글 목록 화면 이동
+          }),
           _buildMenuDivider(),
           _buildMenuTile(
             context,
@@ -320,14 +300,9 @@ class MyPageScreen extends StatelessWidget {
             },
           ),
           _buildMenuDivider(),
-          _buildMenuTile(
-            context,
-            Icons.post_add_rounded,
-            "내가 쓴 게시물",
-            () {
-              // TODO: 내가 쓴 게시글 목록
-            },
-          ),
+          _buildMenuTile(context, Icons.post_add_rounded, "내가 쓴 게시물", () {
+            // TODO: 내가 쓴 게시글 목록
+          }),
         ],
       ),
     );
@@ -348,14 +323,9 @@ class MyPageScreen extends StatelessWidget {
       color: Colors.white,
       child: Column(
         children: [
-          _buildMenuTile(
-            context,
-            Icons.category_rounded,
-            "카테고리 관리",
-            () {
-              // TODO: 카테고리 관리 화면
-            },
-          ),
+          _buildMenuTile(context, Icons.category_rounded, "카테고리 관리", () {
+            // TODO: 카테고리 관리 화면
+          }),
           _buildMenuDivider(),
           _buildMenuTile(
             context,
@@ -366,23 +336,13 @@ class MyPageScreen extends StatelessWidget {
             },
           ),
           _buildMenuDivider(),
-          _buildMenuTile(
-            context,
-            Icons.bar_chart_rounded,
-            "통계 보기",
-            () {
-              // TODO: 통계 화면
-            },
-          ),
+          _buildMenuTile(context, Icons.bar_chart_rounded, "통계 보기", () {
+            // TODO: 통계 화면
+          }),
           _buildMenuDivider(),
-          _buildMenuTile(
-            context,
-            Icons.flag_rounded,
-            "목표 금액 변경",
-            () {
-              // TODO: 목표 금액 변경 화면
-            },
-          ),
+          _buildMenuTile(context, Icons.flag_rounded, "목표 금액 변경", () {
+            // TODO: 목표 금액 변경 화면
+          }),
         ],
       ),
     );
@@ -406,9 +366,7 @@ class MyPageScreen extends StatelessWidget {
             if (context.mounted) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
 
               await Future.microtask(() {
