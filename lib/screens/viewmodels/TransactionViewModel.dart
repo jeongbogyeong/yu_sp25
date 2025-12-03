@@ -1,60 +1,82 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../domain/entities/transaction_entity.dart';
 import '../../domain/usecases/transaction_user.dart';
 
 class TransactionViewModel with ChangeNotifier {
   final TransactionUser transactionUser;
-  List<TransactionEntity>? _transactions;
-  List<TransactionEntity>? get transactions => _transactions;
+
+  // ✅ 널 대신 "빈 리스트"로 시작하게
+  List<TransactionEntity> _transactions = [];
+  List<TransactionEntity> get transactions => _transactions;
+
   TransactionViewModel(this.transactionUser);
 
-  Future<List<TransactionEntity>?> getTransactions(String uid) async {
-    _transactions = await transactionUser.getTransactions(uid);
-    int? i = _transactions?[0].id;
-    print('getTransactions 했을때 : $i');
-    // 거래 내역이 있을 경우에만 정렬 실행
-    if (_transactions != null) {
-      // DateTime 객체로 변환하여 정렬합니다. 최신 날짜가 맨 위로 오도록 내림차순 정렬합니다.
-      _transactions!.sort((a, b) {
-        // TransactionEntity에 date 필드가 String 형태라고 가정하고 DateTime으로 파싱
-        final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
-        final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
+  // ✅ 거래 내역 조회
+  Future<List<TransactionEntity>> getTransactions(String uid) async {
+    // usecase에서 null이 올 수 있으니 ?? [] 로 방어
+    _transactions = await transactionUser.getTransactions(uid) ?? [];
 
-        // 내림차순 (b가 a보다 최신이면 b가 먼저, 즉 -1)
-        return dateB.compareTo(dateA);
-      });
+    if (_transactions.isNotEmpty) {
+      debugPrint('getTransactions 했을때 : 첫 번째 id = ${_transactions[0].id}');
+    } else {
+      debugPrint('getTransactions 했을때 : 거래 내역 없음');
     }
+
+    // 최신 날짜가 위로 오도록 정렬
+    _transactions.sort((a, b) {
+      final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
+      final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
+      return dateB.compareTo(dateA); // 내림차순
+    });
 
     notifyListeners();
     return _transactions;
   }
 
+  // ✅ 거래 추가
   Future<bool> insertTranaction(TransactionEntity transaction) async {
-    final TransactionEntity? insertedTx = await transactionUser.insertTransaction(transaction);
-    if(insertedTx!=null){
-      // 1. 새로운 거래 내역을 리스트에 추가합니다.
-      _transactions?.add(insertedTx);
+    final TransactionEntity? insertedTx = await transactionUser
+        .insertTransaction(transaction);
 
-      // 2. 새로운 내역이 추가된 후 전체 리스트를 다시 정렬합니다.
-      if (_transactions != null) {
-        _transactions!.sort((a, b) {
-          final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
-          final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
-          return dateB.compareTo(dateA); // 내림차순 정렬
-        });
-      }
+    if (insertedTx != null) {
+      // 리스트에 추가 (널 아님)
+      _transactions.add(insertedTx);
+
+      // 정렬
+      _transactions.sort((a, b) {
+        final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
+        final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
+        return dateB.compareTo(dateA);
+      });
+
+      // ⭐ 마지막 소비 기록 날짜 저장
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'last_spending_input',
+        DateTime.now().toIso8601String(),
+      );
+
       notifyListeners();
       return true;
     }
+
     return false;
   }
 
+  // ✅ 거래 삭제
   Future<bool> deleteTransaction(int id) async {
-    bool isSuccess = await transactionUser.deleteTransaction(id);
-    int? i = _transactions?[0].id;
-    print('deleteTransaction 했을때 : $i');
-    if(isSuccess){
-      _transactions?.removeWhere((tx) => tx.id == id);
+    final isSuccess = await transactionUser.deleteTransaction(id);
+
+    if (isSuccess) {
+      if (_transactions.isNotEmpty) {
+        debugPrint('deleteTransaction 전 : 첫 번째 id = ${_transactions[0].id}');
+      } else {
+        debugPrint('deleteTransaction 전 : 리스트 비어있음');
+      }
+
+      _transactions.removeWhere((tx) => tx.id == id);
       notifyListeners();
     }
     return isSuccess;
