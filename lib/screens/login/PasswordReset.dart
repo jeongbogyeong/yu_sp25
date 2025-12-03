@@ -78,6 +78,31 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
     }
   }
 
+  Future<void> _sendResetEmail() async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null || user.email == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인 상태를 확인해주세요.')));
+      return;
+    }
+
+    try {
+      await _supabase.auth.resetPasswordForEmail(user.email!);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('비밀번호 재설정 링크를 ${user.email} 로 보냈습니다.\n메일함을 확인해주세요.'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('메일 발송 중 오류가 발생했습니다: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,6 +177,14 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('비밀번호 변경'),
+                ),
+              ),
+              // 🔹 현재 비밀번호 모를 때: 이메일로 재설정 링크 보내기
+              TextButton(
+                onPressed: _sendResetEmail,
+                child: const Text(
+                  '현재 비밀번호를 모르겠어요 (비밀번호 찾기)',
+                  style: TextStyle(color: Colors.grey),
                 ),
               ),
             ],
