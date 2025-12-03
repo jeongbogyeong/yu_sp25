@@ -25,9 +25,22 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
-    // 화면이 로드될 때 게시글 목록 불러오기
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      viewModel.loadPosts(limit: 20);
+      // Provider에서 ViewModel 두 개 꺼내오기
+      final communityVm = Provider.of<CommunityViewModel>(context, listen: false);
+      final userVm = Provider.of<UserViewModel>(context, listen: false);
+
+      final user = userVm.user;
+      if (user == null) {
+        // 로그인 안 돼 있으면 일단 로드 안 함 (필요하면 스낵바 띄우기)
+        return;
+      }
+
+      // 로그인한 유저의 id를 같이 넘겨서 로드
+      communityVm.loadPosts(
+        limit: 20,
+        userId: user.id,
+      );
     });
   }
 
@@ -77,22 +90,35 @@ class _CommunityScreenState extends State<CommunityScreen> {
       body: viewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
           : viewModel.errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        viewModel.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => viewModel.loadPosts(limit: 20),
-                        child: const Text('다시 시도'),
-                      ),
-                    ],
-                  ),
-                )
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      viewModel.errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final user = userViewModel.user;
+                        if (user == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('로그인이 필요합니다.')),
+                          );
+                          return;
+                        }
+
+                        await viewModel.loadPosts(
+                          limit: 20,
+                          userId: user.id,
+                        );
+                      },
+                      child: const Text('다시 시도'),
+                    ),
+                  ],
+                ),
+              )
               : viewModel.posts.isEmpty
                   ? const Center(
                       child: Text(
@@ -102,15 +128,28 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     )
                   : RefreshIndicator(
-                      onRefresh: () => viewModel.loadPosts(limit: 20),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: viewModel.posts.length,
-                        itemBuilder: (context, index) {
-                          return _buildPostCard(viewModel.posts[index], context);
-                        },
-                      ),
+                    onRefresh: () async {
+                      final user = userViewModel.user;
+                      if (user == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('로그인이 필요합니다.')),
+                        );
+                        return;
+                      }
+
+                      await viewModel.loadPosts(
+                        limit: 20,
+                        userId: user.id,
+                      );
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: viewModel.posts.length,
+                      itemBuilder: (context, index) {
+                        return _buildPostCard(viewModel.posts[index], context);
+                      },
                     ),
+                  ),
 
       floatingActionButton: FloatingActionButton(
         onPressed: () {

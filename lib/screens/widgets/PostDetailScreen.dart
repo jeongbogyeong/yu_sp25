@@ -175,12 +175,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             const Icon(Icons.person_rounded, size: 18, color: Colors.grey),
             const SizedBox(width: 6),
             Text(
-              post["user"],
+              authorName,
               style: const TextStyle(fontSize: 15, color: Colors.black54),
             ),
             const Text(" | ", style: TextStyle(color: Colors.grey)),
             Text(
-              post["time"],
+              timeText,
               style: const TextStyle(fontSize: 15, color: Colors.grey),
             ),
           ],
@@ -190,18 +190,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   // 리액션 버튼 (좋아요/댓글)
-  Widget _buildReactionButton(IconData icon, int count, Color color) {
-    return InkWell(
-      onTap: () {
-        // 좋아요 기능 등
-      },
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: color),
-          const SizedBox(width: 8),
-          Text(
-            NumberFormat('#,###').format(count),
-            style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.bold),
+  Widget _buildReactionButton({
+    required IconData icon,
+    required int count,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 24, color: color),
+        const SizedBox(width: 8),
+        Text(
+          NumberFormat('#,###').format(count),
+          style: TextStyle(
+            fontSize: 16,
+            color: color,
+            fontWeight: FontWeight.bold,
           ),
         ],
       ),
@@ -209,7 +212,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   // ✅ 댓글 타일 위젯
-  Widget _buildCommentTile(Map<String, dynamic> comment) {
+  Widget _buildCommentTile({
+    required String user,
+    required String text,
+    required String time,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -229,19 +236,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      comment["user"],
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      user,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     Text(
-                      comment["time"],
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      time,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  comment["text"],
-                  style: const TextStyle(fontSize: 15, color: Colors.black87),
+                  text,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ),
@@ -251,8 +267,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
-  // ✅ 댓글 입력창 위젯
-  Widget _buildCommentInputField(BuildContext context) {
+  // ✅ 댓글 입력창 위젯 → ViewModel.addComment 사용
+  Widget _buildCommentInputField(
+    BuildContext context,
+    CommunityViewModel vm,
+    UserViewModel userVm,
+    String postId,
+  ) {
     return Container(
       padding: EdgeInsets.only(
           left: 16,
@@ -263,7 +284,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 0.5)),
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.shade300,
+            width: 0.5,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -281,7 +307,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
           ),
           IconButton(
-            onPressed: _addComment,
+            onPressed: () async {
+              final text = _commentController.text.trim();
+              if (text.isEmpty) return;
+
+              final user = userVm.user;
+              if (user == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('로그인이 필요합니다.')),
+                );
+                return;
+              }
+
+              final ok = await vm.addComment(
+                postId: postId,
+                authorId: user.id,
+                authorName: user.name,
+                content: text,
+              );
+
+              if (ok) {
+                _commentController.clear();
+                FocusScope.of(context).unfocus();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      vm.errorMessage ?? '댓글 작성에 실패했습니다.',
+                    ),
+                  ),
+                );
+              }
+            },
             icon: const Icon(Icons.send_rounded),
             color: _primaryColor,
             disabledColor: Colors.grey,

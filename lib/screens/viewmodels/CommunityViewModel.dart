@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart';
 import '../../domain/entities/community_post_entity.dart';
 import '../../domain/entities/comment_entity.dart';
-import '../../data/usecases/get_community_posts_usecase.dart';
-import '../../data/usecases/get_post_detail_usecase.dart';
-import '../../data/usecases/create_post_usecase.dart';
-import '../../data/usecases/update_post_usecase.dart';
-import '../../data/usecases/delete_post_usecase.dart';
-import '../../data/usecases/get_comments_usecase.dart';
-import '../../data/usecases/add_comment_usecase.dart';
-import '../../data/usecases/delete_comment_usecase.dart';
-import '../../data/usecases/toggle_like_usecase.dart';
-import '../../data/usecases/is_liked_usecase.dart';
+import '../../domain/usecases/get_community_posts_usecase.dart';
+import '../../domain/usecases/get_post_detail_usecase.dart';
+import '../../domain/usecases/create_post_usecase.dart';
+import '../../domain/usecases/update_post_usecase.dart';
+import '../../domain/usecases/delete_post_usecase.dart';
+import '../../domain/usecases/get_comments_usecase.dart';
+import '../../domain/usecases/add_comment_usecase.dart';
+import '../../domain/usecases/delete_comment_usecase.dart';
+import '../../domain/usecases/toggle_like_usecase.dart';
+import '../../domain/usecases/is_liked_usecase.dart';
 
 class CommunityViewModel with ChangeNotifier {
   // UseCases
@@ -61,6 +61,7 @@ class CommunityViewModel with ChangeNotifier {
     int? limit,
     int? offset,
     String? category,
+    required String userId,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -72,10 +73,11 @@ class CommunityViewModel with ChangeNotifier {
         offset: offset,
         category: category,
       );
+
       
       // 각 게시글의 좋아요 상태 확인
       for (var post in _posts) {
-        await _checkLikeStatus(post.id);
+        await _checkLikeStatus(post.id, userId);
       }
     } catch (e) {
       _errorMessage = "게시글을 불러오는 중 오류가 발생했습니다: $e";
@@ -89,7 +91,9 @@ class CommunityViewModel with ChangeNotifier {
   // ==================================================
   // 게시글 상세 불러오기
   // ==================================================
-  Future<void> loadPostDetail(String postId) async {
+  Future<void> loadPostDetail(String postId, {required String userId,}) 
+  
+  async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -101,7 +105,7 @@ class CommunityViewModel with ChangeNotifier {
         // 댓글도 함께 불러오기
         await loadComments(postId);
         // 좋아요 상태 확인
-        await _checkLikeStatus(postId);
+        await _checkLikeStatus(postId, userId);
       }
     } catch (e) {
       _errorMessage = "게시글을 불러오는 중 오류가 발생했습니다: $e";
@@ -356,7 +360,7 @@ class CommunityViewModel with ChangeNotifier {
         _posts[postIndex] = post.copyWith(
           likesCount: isLiked
               ? post.likesCount + 1
-              : post.likesCount - 1,
+              : (post.likesCount > 0 ? post.likesCount - 1 : 0),
         );
       }
 
@@ -383,13 +387,11 @@ class CommunityViewModel with ChangeNotifier {
   // ==================================================
   // 좋아요 상태 확인 (내부 메서드)
   // ==================================================
-  Future<void> _checkLikeStatus(String postId) async {
+  Future<void> _checkLikeStatus(String postId, String userId) async {
     try {
-      // 현재 사용자 ID는 나중에 UserViewModel에서 가져올 수 있음
-      // 일단 기본값으로 처리
       final isLiked = await isLikedUseCase.call(
         postId: postId,
-        userId: '', // TODO: 실제 사용자 ID로 교체 필요
+        userId: userId, // TODO: 실제 사용자 ID로 교체 필요
       );
       _likedPosts[postId] = isLiked;
     } catch (e) {
