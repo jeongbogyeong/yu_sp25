@@ -16,9 +16,27 @@ class UserViewModel with ChangeNotifier {
     return _user;
   }
 
-  Future<UserEntity?> signup(String email, String password,String name, int accountNumber) async {
-    _user = await userInfoUser.signup(email, password,name,accountNumber);
+  Future<UserEntity?> signup(
+    String email,
+    String password,
+    String name,
+    int accountNumber,
+    String bankName,
+  ) async {
+    _user = await userInfoUser.signup(
+      email,
+      password,
+      name,
+      accountNumber,
+      bankName,
+    );
     notifyListeners();
     return _user;
+  }
+
+  Future<void> logout() async {
+    await userInfoUser.logout();
+    _user = null;
+    notifyListeners();
   }
 }

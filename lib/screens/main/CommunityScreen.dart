@@ -91,7 +91,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
         },
         backgroundColor: _primaryColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 30),
+        child: const Icon(
+          Icons.edit_note_rounded,
+          color: Colors.white,
+          size: 30,
+        ),
       ),
     );
   }
@@ -102,9 +106,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget _buildPostCard(Map<String, dynamic> post, BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 3,
       color: Colors.white,
       child: InkWell(
@@ -157,7 +159,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
               // 사용자 정보 및 시간
               Row(
                 children: [
-                  const Icon(Icons.person_rounded, size: 16, color: Colors.grey),
+                  const Icon(
+                    Icons.person_rounded,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     post["user"],
@@ -175,9 +181,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
               // 좋아요 및 댓글 수
               Row(
                 children: [
-                  _buildReactionIcon(Icons.thumb_up_alt_outlined, post["likes"], _primaryColor),
+                  _buildReactionIcon(
+                    Icons.thumb_up_alt_outlined,
+                    post["likes"],
+                    _primaryColor,
+                  ),
                   const SizedBox(width: 15),
-                  _buildReactionIcon(Icons.comment_outlined, post["comments"], Colors.blueGrey),
+                  _buildReactionIcon(
+                    Icons.comment_outlined,
+                    post["comments"],
+                    Colors.blueGrey,
+                  ),
                 ],
               ),
             ],
@@ -195,7 +209,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
         const SizedBox(width: 4),
         Text(
           NumberFormat('#,###').format(count),
-          style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 14,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -265,7 +283,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         } else {
                           // TODO: 제목이나 내용이 비었을 때 알림
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('제목과 내용을 모두 입력해 주세요.')),
+                            const SnackBar(
+                              content: Text('제목과 내용을 모두 입력해 주세요.'),
+                            ),
                           );
                         }
                       },
@@ -273,9 +293,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         backgroundColor: _primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: const Text("등록하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        "등록하기",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],

@@ -5,11 +5,13 @@ class UserEntity {
   final String name;
   final String email;
   final int account_number;
+  final String? bankName;
 
   const UserEntity({
     required this.id,
     required this.name,
     required this.email,
     required this.account_number,
+    this.bankName,
   });
 }
