@@ -45,4 +45,10 @@ const List<NotificationDefinition> notificationDefinitions = [
     description: "일정 금액 이상 소비 시 예상 세금 계산 결과를 알림",
     frequency: "매월 1일",
   ),
+  NotificationDefinition(
+    type: 5,
+    title: "소비 기록이 지연되고 있어요",
+    description: "소비 기록을 사용자가 2일 이상 입력하지 않았을 때 알림",
+    frequency: "필요시",
+  ),
 ];
