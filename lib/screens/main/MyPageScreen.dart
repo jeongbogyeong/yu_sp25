@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:smartmoney/screens/login/LoginScreen.dart';
 
-// ViewModel & Screens
+// ViewModel
 import '../../service/notification/notification_service.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
-import '../MyCommunity/MyCommentListScreen.dart';
-import '../MyCommunity/MyLikedPostListScreen.dart';
-import '../MyCommunity/MyPostListScreen.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
@@ -22,7 +17,7 @@ const Color _expenseColor = Color(0xFFEF5350); // 지출/위험 계열 (빨간�
 class MyPageScreen extends StatelessWidget {
   const MyPageScreen({super.key});
 
-  // 이번 달 요약 (가정 값)
+  // 이번 달 요약 (가정)
   final int _income = 2000000;
   final int _expense = 1200000;
   final int _balance = 800000;
@@ -30,7 +25,7 @@ class MyPageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _secondaryColor,
+      backgroundColor: _secondaryColor, // ✨ 배경색 통일
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text("마이페이지"),
@@ -41,7 +36,7 @@ class MyPageScreen extends StatelessWidget {
         ),
         backgroundColor: _secondaryColor,
         elevation: 0.0,
-        centerTitle: false,
+        centerTitle: false, // ✨ 제목 왼쪽 정렬
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -85,64 +80,72 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ 1. 프로필 영역 (Profile Area)
-  //    - 우선순위: UserViewModel.user → Supabase 세션 → 기본값
   // ----------------------------------------------------
   Widget _buildProfileArea() {
-    final session = Supabase.instance.client.auth.currentSession;
+    return Consumer<UserViewModel>(
+      builder: (context, vm, child) {
+        return InkWell(
+          onTap: () async {
+            final picker = ImagePicker();
+            final picked = await picker.pickImage(source: ImageSource.gallery);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: _primaryColor.withOpacity(0.1),
-            child: Icon(Icons.person_rounded, size: 40, color: _primaryColor),
-          ),
-          const SizedBox(width: 16),
-          Consumer<UserViewModel>(
-            builder: (context, vm, child) {
-              // 이름 우선순위:
-              // 1) UserViewModel.user.name
-              // 2) Supabase 세션 userMetadata['name']
-              // 3) Supabase 세션 email 앞부분
-              // 4) 기본 'User' (필요하면 여기 '윤화'로 바꿔도 됨)
-              String? name = vm.user?.name;
+            if (picked == null) return;
 
-              name ??= session?.user.userMetadata?['name'] as String?;
-              name ??= session?.user.email?.split('@').first;
-              name ??= 'User';
+            final userId = vm.user!.id;
 
-              // 이메일 우선순위:
-              // 1) UserViewModel.user.email
-              // 2) Supabase 세션 email
-              String? email = vm.user?.email ?? session?.user.email ?? '';
+            // Storage 업로드
+            final imageUrl = await vm.uploadProfileImage(userId, picked);
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+            // DB 업데이트 + ViewModel 업데이트
+            await vm.updateProfileImage(imageUrl);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: _primaryColor.withOpacity(0.1),
+                  backgroundImage: vm.user?.photoUrl != null
+                      ? NetworkImage(vm.user!.photoUrl!)
+                      : null,
+                  child: vm.user?.photoUrl == null
+                      ? Icon(
+                    Icons.person_rounded,
+                    size: 40,
+                    color: _primaryColor,
+                  )
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vm.user!.name,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    email,
-                    style: const TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ],
-              );
-            },
+                    const SizedBox(height: 4),
+                    Text(
+                      vm.user!.email,
+                      style: const TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Icon(Icons.edit_rounded, color: Colors.grey),
+              ],
+            ),
           ),
-          const Spacer(),
-        ],
-      ),
+        );
+      },
     );
   }
+
 
   // ----------------------------------------------------
   // ✅ 2. 이번 달 요약 카드 (Summary Card)
@@ -255,6 +258,9 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ 정보 변경 카드
+  //   - 비밀번호 재설정
+  //   - 프로필 수정
+  //   - 알림 설정 (기존 기능 유지)
   // ----------------------------------------------------
   Widget _buildInfoChangeCard(BuildContext context) {
     return Card(
@@ -351,6 +357,10 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ My 지출 카드
+  //   - 카테고리 관리
+  //   - 자산 계좌 관리
+  //   - 통계 보기
+  //   - 목표 금액 변경
   // ----------------------------------------------------
   Widget _buildSpendingCard(BuildContext context) {
     return Card(

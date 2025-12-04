@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'package:smartmoney/service/notification/notification_service.dart';
+import '../viewmodels/TransactionViewModel.dart';
 import 'SignUpScreen.dart';
 //ui위젯
 import 'package:smartmoney/screens/widgets/login_button.dart';
@@ -41,7 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Provider에서 필요한 객체 가져오기
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
     final statUserCase = Provider.of<StatUser>(context, listen: false);
+
 
     try {
       final userEntity = await userViewModel.login(email, password);
@@ -67,7 +70,9 @@ class _LoginScreenState extends State<LoginScreen> {
             content: "${userEntity.name}님, Nudge_gap 오신 것을 환영합니다!",
             isSuccess: true,
             // 화면이 이미 이동했으므로, onConfirmed는 팝업을 닫는 역할만 수행합니다.
-            onConfirmed: () {},
+            onConfirmed: () {
+              transactionViewModel.getTransactions(userEntity.id);
+            },
           );
         });
       } else {

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/entities/transaction_entity.dart';
+import '../viewmodels/StatViewModel.dart';
 import '../viewmodels/TransactionViewModel.dart';
 import '../viewmodels/UserViewModel.dart';
 
@@ -46,11 +47,9 @@ const Map<int, String> paymentMethods = {
 };
 
 class TransactionDetailScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> initialTransactions;
 
   const TransactionDetailScreen({
-    super.key,
-    required this.initialTransactions,
+    super.key
   });
 
   @override
@@ -83,12 +82,11 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   // ----------------------------------------------------
   void _deleteTransaction(TransactionEntity transaction) async {
     final viewModel = Provider.of<TransactionViewModel>(context, listen: false);
-
+    final stat = Provider.of<StatViewModel>(context, listen: false);
     final bool success = await viewModel.deleteTransaction(transaction.id);
-
     if (success) {
-      //final String currentUserId = Provider.of<UserViewModel>(context, listen: false).user!.id;
-      //await viewModel.getTransactions(currentUserId);
+      if(transaction.categoryId<=10)
+      stat.updateSpend(transaction.categoryId, transaction.amount.toDouble());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('거래 내역이 삭제되었습니다.'), duration: Duration(seconds: 1)),
       );
@@ -448,7 +446,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
 
       // TODO: 사용자 ID는 실제 앱에서는 Auth ViewModel 등에서 가져와야 합니다.
       final int accountNum = Provider.of<UserViewModel>(context, listen: false).user!.account_number;
-
+      final stat = Provider.of<StatViewModel>(context, listen: false);
       // ✅ TransactionEntity 객체 생성 (Map 대신)
       final newTransaction = TransactionEntity(
         id: 0, // DB에서 할당되므로 0으로 설정
@@ -459,6 +457,9 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
         createdAt: DateFormat('yyyy-MM-dd').format(_selectedDate).toString(),
         assetId: _selectedPaymentMethod!,
       );
+      if(_selectedTypeKey!<=10){
+        stat.updateSpend(_selectedTypeKey!, -finalAmount.toDouble());
+      }
 
       widget.onSave(newTransaction);
     }

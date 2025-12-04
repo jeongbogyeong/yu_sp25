@@ -22,8 +22,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController accountNumberController = TextEditingController();
   final TextEditingController bankNameController = TextEditingController();
@@ -34,6 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   static const Color secondaryColor = Color(0xFFF0F4F8);
 
   Future<void> _signUp() async {
+
     if (!_formKey.currentState!.validate()) {
       // print("폼 유효성 검사");
       return;
@@ -61,9 +61,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ? 0
         : (int.tryParse(accountNumberString) ?? 0);
 
-    if (accountNumberString.isNotEmpty &&
-        accountNumberInt == 0 &&
-        accountNumberString != '0') {
+    if (accountNumberString.isNotEmpty && accountNumberInt == 0 && accountNumberString != '0') {
       CommonDialog.show(
         context,
         title: "회원가입 실패 🚨",
@@ -72,6 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       return;
     }
+
 
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
 
@@ -86,6 +85,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (userEntity != null) {
+
         // 1. ✅ 먼저 화면을 ParentPage로 교체하여 이동시킵니다. (자동 이동)
         Navigator.pushReplacement(
           context,
@@ -105,15 +105,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
             onConfirmed: () {},
           );
         });
+
       } else {
         throw Exception("Authentication failed, user data not returned.");
       }
     } catch (e) {
       // ⚠️ 에러 처리 로직은 변경 없음
       String message = "알 수 없는 오류가 발생했습니다.";
-      if (e.toString().contains("User already registered") ||
-          e.toString().contains("email-already-in-use")) {
+      if (e.toString().contains("email-already-in-use")) {
         message = "이미 사용 중인 이메일입니다. 다른 이메일로 시도해 주세요.";
+      } else if (e.toString().contains("account-number-already-in-use")) {
+        message = "이미 등록된 계좌번호입니다. 다른 계좌번호를 사용하세요.";
       } else if (e.toString().contains("MySQL registration failed:")) {
         message = e.toString().split("MySQL registration failed:").last.trim();
       } else if (e.toString().contains("Server connection error:")) {
@@ -200,7 +202,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   }
                   return null;
                 },
-              ), // ... 은행 이름 입력 필드
+              ),
+              const SizedBox(height: 16),
+              // 은행 이름 입력 필드
               _buildTextFormField(
                 controller: bankNameController,
                 labelText: "은행 이름 (선택)",
@@ -262,6 +266,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String labelText,
@@ -284,10 +289,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 16.0,
-          horizontal: 10.0,
-        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 10.0),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: primaryColor, width: 2),

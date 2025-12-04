@@ -107,15 +107,6 @@ class StatViewModel with ChangeNotifier {
     return success;
   }
 
-  // --------------------------------------------------
-  // 기존 updateGoalAmount, updateOverallGoal 메서드는 제거되거나
-  // GoalSettingScreen에서 사용하지 않으므로 주석 처리합니다.
-  // --------------------------------------------------
-  /*
-  Future<bool> updateGoalAmount(int spendType, double newGoal) async { ... }
-  Future<void> updateOverallGoal(double newGoal) async { ... }
-  */
-
   // ==================================================
   // ✅ 기타 자동 조정 (newOverallGoal, newCategoryGoals 없이 자체 데이터 사용)
   // ==================================================
@@ -175,5 +166,48 @@ class StatViewModel with ChangeNotifier {
           type: type,
         );
   }
+  // ==================================================
+// ✅ 특정 카테고리의 지출(spending) 값을 업데이트하는 함수
+// ==================================================
+  Future<bool> updateSpend(int type, double newSpending) async {
+    try {
+      // 🔥 로컬 값 누적 갱신
+      categoryExpenses[type] =
+          (categoryExpenses[type] ?? 0) + newSpending;
+
+      // 기존 엔티티 가져오기
+      final entity = _getOrCreateEntity(type);
+
+      // 🔥 DB 저장용 누적된 spending
+      final updatedSpending = entity.spending + newSpending.round();
+
+      // 업데이트된 엔티티
+      final updated = SpendingEntity(
+        uid: entity.uid,
+        goal: entity.goal,
+        spending: updatedSpending,
+        type: type,
+      );
+
+      // DB 업데이트
+      final result = await statUseCase.updateStat(updated);
+
+      if (!result) {
+        _errorMessage = "지출 업데이트 실패 (type: $type)";
+        notifyListeners();
+        return false;
+      }
+
+      notifyListeners();
+      return true;
+
+    } catch (e) {
+      _errorMessage = "지출 업데이트 중 오류: $e";
+      notifyListeners();
+      return false;
+    }
+  }
+
+
 
 }
