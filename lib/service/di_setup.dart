@@ -42,6 +42,7 @@ import '../screens/viewmodels/UserViewModel.dart';
 import '../screens/viewmodels/StatViewModel.dart';
 import '../screens/viewmodels/CommunityViewModel.dart';
 import '../screens/viewmodels/TransactionViewModel.dart';
+
 // GetIt 인스턴스를 전역으로 사용하기 위해 선언
 final locator = GetIt.instance;
 
@@ -49,79 +50,103 @@ void setupLocator() {
   final client = Supabase.instance.client;
   //#region Data Layer
   locator.registerLazySingleton<UserRemoteDataSource>(
-          () => UserRemoteDataSource(client));
+    () => UserRemoteDataSource(client),
+  );
   locator.registerLazySingleton<StatRemoteDataSource>(
-          () => StatRemoteDataSource(client));
+    () => StatRemoteDataSource(client),
+  );
   locator.registerLazySingleton<CommunityRemoteDataSource>(
-          () => CommunityRemoteDataSource(client));
+    () => CommunityRemoteDataSource(client),
+  );
   locator.registerLazySingleton<TransactionRomoteDatasource>(
-          () => TransactionRomoteDatasource(client));
+    () => TransactionRomoteDatasource(client),
+  );
 
   locator.registerLazySingleton<UserRepository>(
-          () => UserRepositoryImpl(locator<UserRemoteDataSource>()));
+    () => UserRepositoryImpl(locator<UserRemoteDataSource>()),
+  );
   locator.registerLazySingleton<StatRepository>(
-          () => StatRepositoryImpl(locator<StatRemoteDataSource>()));
+    () => StatRepositoryImpl(locator<StatRemoteDataSource>()),
+  );
   locator.registerLazySingleton<CommunityRepository>(
-          () => CommunityRepositoryImpl(locator<CommunityRemoteDataSource>()));
+    () => CommunityRepositoryImpl(locator<CommunityRemoteDataSource>()),
+  );
   locator.registerLazySingleton<TransactionRepository>(
-          () => TransactionRepositoryImpl(locator<TransactionRomoteDatasource>()));
-
+    () => TransactionRepositoryImpl(locator<TransactionRomoteDatasource>()),
+  );
 
   //#endregion
 
   //#region Domain Layer
   locator.registerLazySingleton<UserInfoUser>(
-          () => UserInfoUser(locator<UserRepository>()));
+    () => UserInfoUser(locator<UserRepository>()),
+  );
 
   locator.registerLazySingleton<StatUser>(
-          () => StatUser(locator<StatRepository>()));
+    () => StatUser(locator<StatRepository>()),
+  );
 
   // Community UseCases
   locator.registerLazySingleton<GetCommunityPostsUseCase>(
-          () => GetCommunityPostsUseCase(locator<CommunityRepository>()));
+    () => GetCommunityPostsUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<GetPostDetailUseCase>(
-          () => GetPostDetailUseCase(locator<CommunityRepository>()));
+    () => GetPostDetailUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<CreatePostUseCase>(
-          () => CreatePostUseCase(locator<CommunityRepository>()));
+    () => CreatePostUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<UpdatePostUseCase>(
-          () => UpdatePostUseCase(locator<CommunityRepository>()));
+    () => UpdatePostUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<DeletePostUseCase>(
-          () => DeletePostUseCase(locator<CommunityRepository>()));
+    () => DeletePostUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<GetCommentsUseCase>(
-          () => GetCommentsUseCase(locator<CommunityRepository>()));
+    () => GetCommentsUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<AddCommentUseCase>(
-          () => AddCommentUseCase(locator<CommunityRepository>()));
+    () => AddCommentUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<DeleteCommentUseCase>(
-          () => DeleteCommentUseCase(locator<CommunityRepository>()));
+    () => DeleteCommentUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<ToggleLikeUseCase>(
-          () => ToggleLikeUseCase(locator<CommunityRepository>()));
+    () => ToggleLikeUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<IsLikedUseCase>(
-          () => IsLikedUseCase(locator<CommunityRepository>()));
+    () => IsLikedUseCase(locator<CommunityRepository>()),
+  );
   locator.registerLazySingleton<TransactionUser>(
-          () => TransactionUser(locator<TransactionRepository>()));
+    () => TransactionUser(locator<TransactionRepository>()),
+  );
   //#endregion
 
   //#region Presentation Layer - ViewModels
   locator.registerLazySingleton<UserViewModel>(
-          () => UserViewModel(locator<UserInfoUser>()));
+    () => UserViewModel(locator<UserInfoUser>()),
+  );
 
   locator.registerLazySingleton<StatViewModel>(
-          () => StatViewModel(locator<StatUser>()));
+    () => StatViewModel(locator<StatUser>()),
+  );
 
   locator.registerLazySingleton<CommunityViewModel>(
-          () => CommunityViewModel(
-            getCommunityPostsUseCase: locator<GetCommunityPostsUseCase>(),
-            getPostDetailUseCase: locator<GetPostDetailUseCase>(),
-            createPostUseCase: locator<CreatePostUseCase>(),
-            updatePostUseCase: locator<UpdatePostUseCase>(),
-            deletePostUseCase: locator<DeletePostUseCase>(),
-            getCommentsUseCase: locator<GetCommentsUseCase>(),
-            addCommentUseCase: locator<AddCommentUseCase>(),
-            deleteCommentUseCase: locator<DeleteCommentUseCase>(),
-            toggleLikeUseCase: locator<ToggleLikeUseCase>(),
-            isLikedUseCase: locator<IsLikedUseCase>(),
-          ));
+    () => CommunityViewModel(
+      getCommunityPostsUseCase: locator<GetCommunityPostsUseCase>(),
+      getPostDetailUseCase: locator<GetPostDetailUseCase>(),
+      createPostUseCase: locator<CreatePostUseCase>(),
+      updatePostUseCase: locator<UpdatePostUseCase>(),
+      deletePostUseCase: locator<DeletePostUseCase>(),
+      getCommentsUseCase: locator<GetCommentsUseCase>(),
+      addCommentUseCase: locator<AddCommentUseCase>(),
+      deleteCommentUseCase: locator<DeleteCommentUseCase>(),
+      toggleLikeUseCase: locator<ToggleLikeUseCase>(),
+      isLikedUseCase: locator<IsLikedUseCase>(),
+    ),
+  );
   locator.registerLazySingleton<TransactionViewModel>(
-          () => TransactionViewModel(locator<TransactionUser>()));
+    () => TransactionViewModel(locator<TransactionUser>()),
+  );
   //#endregion
 }

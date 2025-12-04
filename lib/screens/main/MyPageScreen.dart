@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:smartmoney/screens/login/LoginScreen.dart';
 
-// ViewModel
+// ViewModel & Screens
 import '../../service/notification/notification_service.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
+import '../MyCommunity/MyCommentListScreen.dart';
+import '../MyCommunity/MyLikedPostListScreen.dart';
+import '../MyCommunity/MyPostListScreen.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
@@ -17,7 +22,7 @@ const Color _expenseColor = Color(0xFFEF5350); // 지출/위험 계열 (빨간�
 class MyPageScreen extends StatelessWidget {
   const MyPageScreen({super.key});
 
-  // 이번 달 요약 (가정)
+  // 이번 달 요약 (가정 값)
   final int _income = 2000000;
   final int _expense = 1200000;
   final int _balance = 800000;
@@ -25,7 +30,7 @@ class MyPageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _secondaryColor, // ✨ 배경색 통일
+      backgroundColor: _secondaryColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text("마이페이지"),
@@ -36,7 +41,7 @@ class MyPageScreen extends StatelessWidget {
         ),
         backgroundColor: _secondaryColor,
         elevation: 0.0,
-        centerTitle: false, // ✨ 제목 왼쪽 정렬
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -80,8 +85,11 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ 1. 프로필 영역 (Profile Area)
+  //    - 우선순위: UserViewModel.user → Supabase 세션 → 기본값
   // ----------------------------------------------------
   Widget _buildProfileArea() {
+    final session = Supabase.instance.client.auth.currentSession;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
       child: Row(
@@ -94,11 +102,27 @@ class MyPageScreen extends StatelessWidget {
           const SizedBox(width: 16),
           Consumer<UserViewModel>(
             builder: (context, vm, child) {
+              // 이름 우선순위:
+              // 1) UserViewModel.user.name
+              // 2) Supabase 세션 userMetadata['name']
+              // 3) Supabase 세션 email 앞부분
+              // 4) 기본 'User' (필요하면 여기 '윤화'로 바꿔도 됨)
+              String? name = vm.user?.name;
+
+              name ??= session?.user.userMetadata?['name'] as String?;
+              name ??= session?.user.email?.split('@').first;
+              name ??= 'User';
+
+              // 이메일 우선순위:
+              // 1) UserViewModel.user.email
+              // 2) Supabase 세션 email
+              String? email = vm.user?.email ?? session?.user.email ?? '';
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vm.user?.name ?? 'User',
+                    name,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -107,7 +131,7 @@ class MyPageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    vm.user?.email ?? '',
+                    email,
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],
@@ -115,7 +139,6 @@ class MyPageScreen extends StatelessWidget {
             },
           ),
           const Spacer(),
-          // 프로필 수정은 아래 메뉴(정보 변경 섹션)로 빼서 관리
         ],
       ),
     );
@@ -232,9 +255,6 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ 정보 변경 카드
-  //   - 비밀번호 재설정
-  //   - 프로필 수정
-  //   - 알림 설정 (기존 기능 유지)
   // ----------------------------------------------------
   Widget _buildInfoChangeCard(BuildContext context) {
     return Card(
@@ -275,11 +295,17 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ My 게시판 활동 카드
-  //   - 내가 쓴 댓글
-  //   - 내가 달았던 좋아요
-  //   - 내가 쓴 게시물
+  //   - Supabase 세션 기준으로 userId 사용 (앱 재실행에도 유지)
   // ----------------------------------------------------
   Widget _buildBoardActivityCard(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+
+    if (session == null) {
+      return const Text("로그인이 필요합니다.");
+    }
+
+    final String userId = session.user.id;
+
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -288,7 +314,12 @@ class MyPageScreen extends StatelessWidget {
       child: Column(
         children: [
           _buildMenuTile(context, Icons.comment_rounded, "내가 쓴 댓글", () {
-            // TODO: 내가 쓴 댓글 목록 화면 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MyCommentListScreen(userId: userId),
+              ),
+            );
           }),
           _buildMenuDivider(),
           _buildMenuTile(
@@ -296,12 +327,22 @@ class MyPageScreen extends StatelessWidget {
             Icons.thumb_up_alt_outlined,
             "내가 달았던 좋아요",
             () {
-              // TODO: 내가 좋아요한 게시글 목록
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MyLikedPostListScreen(userId: userId),
+                ),
+              );
             },
           ),
           _buildMenuDivider(),
           _buildMenuTile(context, Icons.post_add_rounded, "내가 쓴 게시물", () {
-            // TODO: 내가 쓴 게시글 목록
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MyPostListScreen(userId: userId),
+              ),
+            );
           }),
         ],
       ),
@@ -310,10 +351,6 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ My 지출 카드
-  //   - 카테고리 관리
-  //   - 자산 계좌 관리
-  //   - 통계 보기
-  //   - 목표 금액 변경
   // ----------------------------------------------------
   Widget _buildSpendingCard(BuildContext context) {
     return Card(
@@ -357,28 +394,24 @@ class MyPageScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
       color: Colors.white,
-      child: _buildMenuTile(
-        context,
-        Icons.logout_rounded,
-        "로그아웃",
-        () async {
-          try {
-            if (context.mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
+      child: _buildMenuTile(context, Icons.logout_rounded, "로그아웃", () async {
+        try {
+          // Supabase 세션 로그아웃
+          await Supabase.instance.client.auth.signOut();
+          // ViewModel 상태 정리
+          await context.read<UserViewModel>().logout();
 
-              await Future.microtask(() {
-                // TODO: UserViewModel 상태 정리 (토큰/유저 정보 초기화 등)
-              });
-            }
-          } catch (e) {
-            print("로그아웃 오류: $e");
+          if (context.mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (route) => false,
+            );
           }
-        },
-        iconColor: _expenseColor, // 로그아웃은 빨간색 계열
-      ),
+        } catch (e) {
+          debugPrint("로그아웃 오류: $e");
+        }
+      }, iconColor: _expenseColor),
     );
   }
 }

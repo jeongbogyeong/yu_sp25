@@ -13,22 +13,27 @@ class CommunityRemoteDataSource {
     String? category,
   }) async {
     try {
-      var query = client.from('posts').select().order('created_at', ascending: false);
-      
+      // ★ 타입 싸움 안 나게 그냥 dynamic으로 받자
+      dynamic query = client.from('posts').select();
+
       if (category != null && category.isNotEmpty) {
-        query = query.eq('category', category);
+        // eq 말고 match만 사용
+        query = query.match({'category': category});
       }
-      
+
       if (limit != null) {
         query = query.limit(limit);
       }
-      
+
       if (offset != null) {
         query = query.range(offset, offset + (limit ?? 20) - 1);
       }
 
+      // 정렬은 제일 마지막에
+      query = query.order('created_at', ascending: false);
+
       final result = await query;
-      
+
       return (result as List).map<CommunityPostEntity>((item) {
         return CommunityPostEntity(
           id: item['id'],
@@ -52,11 +57,9 @@ class CommunityRemoteDataSource {
   // 특정 게시글 조회
   Future<CommunityPostEntity?> getPostById(String postId) async {
     try {
-      final result = await client
-          .from('posts')
-          .select()
-          .eq('id', postId)
-          .maybeSingle();
+      final result = await client.from('posts').select().match({
+        'id': postId,
+      }).maybeSingle();
 
       if (result == null) return null;
 
@@ -87,15 +90,19 @@ class CommunityRemoteDataSource {
     String category = '자유',
   }) async {
     try {
-      final result = await client.from('posts').insert({
-        'title': title,
-        'content': content,
-        'author_id': authorId,
-        'author_name': authorName,
-        'category': category,
-        'likes_count': 0,
-        'comments_count': 0,
-      }).select().single();
+      final result = await client
+          .from('posts')
+          .insert({
+            'title': title,
+            'content': content,
+            'author_id': authorId,
+            'author_name': authorName,
+            'category': category,
+            'likes_count': 0,
+            'comments_count': 0,
+          })
+          .select()
+          .single();
 
       return CommunityPostEntity(
         id: result['id'],
@@ -132,7 +139,7 @@ class CommunityRemoteDataSource {
       final result = await client
           .from('posts')
           .update(updateData)
-          .eq('id', postId)
+          .match({'id': postId})
           .select()
           .single();
 
@@ -157,7 +164,7 @@ class CommunityRemoteDataSource {
   // 게시글 삭제
   Future<bool> deletePost(String postId) async {
     try {
-      await client.from('posts').delete().eq('id', postId);
+      await client.from('posts').delete().match({'id': postId});
       return true;
     } catch (e) {
       print('❌ deletePost error: $e');
@@ -171,7 +178,7 @@ class CommunityRemoteDataSource {
       final result = await client
           .from('comments')
           .select()
-          .eq('post_id', postId)
+          .match({'post_id': postId})
           .order('created_at', ascending: true);
 
       return (result as List).map<CommentEntity>((item) {
@@ -198,23 +205,26 @@ class CommunityRemoteDataSource {
     required String content,
   }) async {
     try {
-      final result = await client.from('comments').insert({
-        'post_id': postId,
-        'author_id': authorId,
-        'author_name': authorName,
-        'content': content,
-      }).select().single();
+      final result = await client
+          .from('comments')
+          .insert({
+            'post_id': postId,
+            'author_id': authorId,
+            'author_name': authorName,
+            'content': content,
+          })
+          .select()
+          .single();
 
       // 댓글 수 증가 (직접 계산)
-      final comments = await client
-          .from('comments')
-          .select('id')
-          .eq('post_id', postId);
-      
+      final comments = await client.from('comments').select('id').match({
+        'post_id': postId,
+      });
+
       await client
           .from('posts')
           .update({'comments_count': (comments as List).length})
-          .eq('id', postId);
+          .match({'id': postId});
 
       return CommentEntity(
         id: result['id'],
@@ -233,7 +243,7 @@ class CommunityRemoteDataSource {
   // 댓글 삭제
   Future<bool> deleteComment(String commentId) async {
     try {
-      await client.from('comments').delete().eq('id', commentId);
+      await client.from('comments').delete().match({'id': commentId});
       return true;
     } catch (e) {
       print('❌ deleteComment error: $e');
@@ -248,32 +258,28 @@ class CommunityRemoteDataSource {
   }) async {
     try {
       // 이미 좋아요가 있는지 확인
-      final existingLike = await client
-          .from('post_likes')
-          .select()
-          .eq('post_id', postId)
-          .eq('user_id', userId)
-          .maybeSingle();
+      final existingLike = await client.from('post_likes').select().match({
+        'post_id': postId,
+        'user_id': userId,
+      }).maybeSingle();
 
       if (existingLike != null) {
         // 좋아요 취소
-        await client
-            .from('post_likes')
-            .delete()
-            .eq('post_id', postId)
-            .eq('user_id', userId);
-        
+        await client.from('post_likes').delete().match({
+          'post_id': postId,
+          'user_id': userId,
+        });
+
         // 좋아요 수 감소 (직접 계산)
-        final likesCount = await client
-            .from('post_likes')
-            .select('id')
-            .eq('post_id', postId);
-        
+        final likesCount = await client.from('post_likes').select('id').match({
+          'post_id': postId,
+        });
+
         await client
             .from('posts')
             .update({'likes_count': (likesCount as List).length})
-            .eq('id', postId);
-        
+            .match({'id': postId});
+
         return false; // 좋아요 취소됨
       } else {
         // 좋아요 추가
@@ -281,18 +287,17 @@ class CommunityRemoteDataSource {
           'post_id': postId,
           'user_id': userId,
         });
-        
+
         // 좋아요 수 증가 (직접 계산)
-        final likesCount = await client
-            .from('post_likes')
-            .select('id')
-            .eq('post_id', postId);
-        
+        final likesCount = await client.from('post_likes').select('id').match({
+          'post_id': postId,
+        });
+
         await client
             .from('posts')
             .update({'likes_count': (likesCount as List).length})
-            .eq('id', postId);
-        
+            .match({'id': postId});
+
         return true; // 좋아요 추가됨
       }
     } catch (e) {
@@ -302,18 +307,13 @@ class CommunityRemoteDataSource {
   }
 
   // 사용자가 좋아요를 눌렀는지 확인
-  Future<bool> isLiked({
-    required String postId,
-    required String userId,
-  }) async {
+  Future<bool> isLiked({required String postId, required String userId}) async {
     try {
-      final result = await client
-          .from('post_likes')
-          .select()
-          .eq('post_id', postId)
-          .eq('user_id', userId)
-          .maybeSingle();
-      
+      final result = await client.from('post_likes').select().match({
+        'post_id': postId,
+        'user_id': userId,
+      }).maybeSingle();
+
       return result != null;
     } catch (e) {
       print('❌ isLiked error: $e');
@@ -321,4 +321,3 @@ class CommunityRemoteDataSource {
     }
   }
 }
-
