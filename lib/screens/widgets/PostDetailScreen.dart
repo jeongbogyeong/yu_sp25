@@ -154,37 +154,50 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   // 좋아요 및 댓글 수 표시
                   Row(
                     children: [
-                      _buildReactionButton(
-                        icon: Icons.thumb_up_alt_outlined,
-                        count: likesCount,
-                        color: _primaryColor,
-                        onTap: () async {
+                      Builder(
+                        builder: (context) {
+                          final communityViewModel =
+                          Provider.of<CommunityViewModel>(context); // listen: true
                           final userViewModel =
                           Provider.of<UserViewModel>(context, listen: false);
-                          final user = userViewModel.user;
-                          if (user == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('로그인이 필요합니다.')),
-                            );
-                            return;
-                          }
 
-                          await communityViewModel.toggleLike(
-                            postId: currentPost['id'],
-                            userId: user.id,
+                          final user = userViewModel.user;
+                          final postId = currentPost['id'] as String;
+
+                          // ✅ 현재 좋아요 상태
+                          final isLiked = communityViewModel.isPostLiked(postId);
+
+                          return _buildReactionButton(
+                            icon: isLiked
+                                ? Icons.thumb_up            // 활성: 채워진 손
+                                : Icons.thumb_up_alt_outlined, // 비활성: 빈 손
+                            count: likesCount,
+                            color: _primaryColor, // 색상 토글
+                            onTap: () async {
+                              if (user == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('로그인이 필요합니다.')),
+                                );
+                                return;
+                              }
+
+                              await communityViewModel.toggleLike(
+                                postId: postId,
+                                userId: user.id,
+                              );
+                              // toggleLike 안에서 notifyListeners() 호출 → isLiked 갱신 → UI 자동 리빌드
+                            },
                           );
-                          // toggleLike 내에서 notifyListeners() 호출하므로
-                          // 여기서 setState는 굳이 안 해도 됨
                         },
                       ),
                       const SizedBox(width: 20),
-                      // ✅ 댓글 수는 ViewModel의 comments 길이로
+                      // 댓글 수는 동일
                       _buildReactionButton(
                         icon: Icons.comment_outlined,
                         count: comments.length,
                         color: Colors.blueGrey,
                         onTap: () {
-                          // 스크롤 이동 구현해도 되고, 지금은 그냥 표시만
+                          // 스크롤 이동 등 필요하면 여기서 처리
                         },
                       ),
                     ],
