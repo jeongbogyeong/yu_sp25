@@ -16,7 +16,7 @@ class CommunityRemoteDataSource {
       var query = client.from('posts').select().order('created_at', ascending: false);
       
       if (category != null && category.isNotEmpty) {
-        query = query.eq('category', category);
+        // = query.eq('category', category);
       }
       
       if (limit != null) {

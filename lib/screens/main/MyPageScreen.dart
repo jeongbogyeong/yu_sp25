@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:smartmoney/screens/login/LoginScreen.dart';
@@ -82,44 +83,70 @@ class MyPageScreen extends StatelessWidget {
   // ✅ 1. 프로필 영역 (Profile Area)
   // ----------------------------------------------------
   Widget _buildProfileArea() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: _primaryColor.withOpacity(0.1),
-            child: Icon(Icons.person_rounded, size: 40, color: _primaryColor),
-          ),
-          const SizedBox(width: 16),
-          Consumer<UserViewModel>(
-            builder: (context, vm, child) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    vm.user?.name ?? 'User',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+    return Consumer<UserViewModel>(
+      builder: (context, vm, child) {
+        return InkWell(
+          onTap: () async {
+            final picker = ImagePicker();
+            final picked = await picker.pickImage(source: ImageSource.gallery);
+
+            if (picked == null) return;
+
+            final userId = vm.user!.id;
+
+            // Storage 업로드
+            final imageUrl = await vm.uploadProfileImage(userId, picked);
+
+            // DB 업데이트 + ViewModel 업데이트
+            await vm.updateProfileImage(imageUrl);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: _primaryColor.withOpacity(0.1),
+                  backgroundImage: vm.user?.photoUrl != null
+                      ? NetworkImage(vm.user!.photoUrl!)
+                      : null,
+                  child: vm.user?.photoUrl == null
+                      ? Icon(
+                    Icons.person_rounded,
+                    size: 40,
+                    color: _primaryColor,
+                  )
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vm.user!.name,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    vm.user?.email ?? '',
-                    style: const TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ],
-              );
-            },
+                    const SizedBox(height: 4),
+                    Text(
+                      vm.user!.email,
+                      style: const TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Icon(Icons.edit_rounded, color: Colors.grey),
+              ],
+            ),
           ),
-          const Spacer(),
-          // 프로필 수정은 아래 메뉴(정보 변경 섹션)로 빼서 관리
-        ],
-      ),
+        );
+      },
     );
   }
+
 
   // ----------------------------------------------------
   // ✅ 2. 이번 달 요약 카드 (Summary Card)
@@ -352,6 +379,7 @@ class MyPageScreen extends StatelessWidget {
   // ✅ 4. 로그아웃 버튼
   // ----------------------------------------------------
   Widget _buildLogoutTile(BuildContext context) {
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -370,7 +398,7 @@ class MyPageScreen extends StatelessWidget {
               );
 
               await Future.microtask(() {
-                // TODO: UserViewModel 상태 정리 (토큰/유저 정보 초기화 등)
+                 userViewModel.logout();
               });
             }
           } catch (e) {

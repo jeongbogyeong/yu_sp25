@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:smartmoney/domain/entities/user_entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +8,7 @@ class UserRemoteDataSource {
   final SupabaseClient client;
 
   UserRemoteDataSource(this.client);
+
 
   // =========================================
   // 로그인
@@ -37,7 +39,8 @@ class UserRemoteDataSource {
         name: data['name'] as String,
         email: data['email'] as String,
         account_number: data['accountNumber'] as int,
-        bankName: data['bankName'] as String?, // 👈 Supabase 컬럼 bankName
+        bankName: data['bankName'] as String?,
+        photoUrl:data['photoUrl'] as String?// 👈 Supabase 컬럼 bankName
       );
     } catch (e) {
       print("로그인 에러 발생: $e");
@@ -116,6 +119,63 @@ class UserRemoteDataSource {
     } catch (e) {
       print("회원가입 에러 발생: $e");
       rethrow;
+    }
+  }
+
+  Future<String> uploadProfileImage(String userId, XFile file) async {
+    final bytes = await file.readAsBytes();
+    final filePath = 'users/$userId/profile_${DateTime.now().millisecondsSinceEpoch}.png';
+
+    await client.storage.from('profile_images').uploadBinary(
+      filePath,
+      bytes,
+      fileOptions: const FileOptions(contentType: 'image/png'),
+    );
+
+    final url = client.storage.from('profile_images').getPublicUrl(filePath);
+    print("url : " +url);
+    return url;
+  }
+
+  Future<bool> updatePhotoUrl(String uid, String url) async {
+    try {
+      final response = await client
+          .from('userInfo_table')
+          .update({'photoUrl': url})
+          .eq('uid', uid)
+          .select(); // <= 업데이트 결과 받기 위해 select 필요!
+
+      print("Supabase update 결과: $uid");
+      return true;
+    } catch (e) {
+      print("updatePhotoUrl 에러 발생: $e");
+      return false;
+    }
+  }
+
+
+
+  Future<UserEntity?> getUserByEmail(String email) async {
+    try {
+      final result = await client
+          .from('userInfo_table')     // ← 유저 테이블 이름
+          .select()
+          .eq('email', email)
+          .maybeSingle();
+
+      if (result == null) return null;
+
+      return UserEntity(
+        id: result['uid'],
+        email: result['email'],
+        name: result['name'],
+        account_number: result['accountNumber'],
+        bankName: result['bankName'] as String?,
+        photoUrl: result['photoUrl'],
+      );
+    } catch (e) {
+      print('❌ getUserByEmail error: $e');
+      return null;
     }
   }
 

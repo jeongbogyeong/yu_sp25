@@ -6,6 +6,7 @@ class UserEntity {
   final String email;
   final int account_number;
   final String? bankName;
+  final String? photoUrl;
 
   const UserEntity({
     required this.id,
@@ -13,5 +14,6 @@ class UserEntity {
     required this.email,
     required this.account_number,
     this.bankName,
+    this.photoUrl,
   });
 }

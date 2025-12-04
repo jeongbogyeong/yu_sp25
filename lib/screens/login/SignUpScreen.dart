@@ -25,6 +25,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController accountNumberController = TextEditingController();
+  final TextEditingController bankNameController = TextEditingController();
 
   bool _isObscureText = true;
 
@@ -43,6 +44,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final confirmPassword = confirmPasswordController.text.trim();
     final name = nameController.text.trim();
     final accountNumberString = accountNumberController.text.trim();
+    final bankName = bankNameController.text.trim();
 
     if (password != confirmPassword) {
       CommonDialog.show(
@@ -200,7 +202,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   }
                   return null;
                 },
-              ), // ... 은행 이름 입력 필드
+              ),
+              const SizedBox(height: 16),
+              // 은행 이름 입력 필드
               _buildTextFormField(
                 controller: bankNameController,
                 labelText: "은행 이름 (선택)",
