@@ -54,9 +54,9 @@ class _MyLikedPostListScreenState extends State<MyLikedPostListScreen> {
 
     final likedPostsInfo = (likeRows as List)
         .map<Map<String, dynamic>>((row) => {
-      'post_id': row['post_id'] as String,
-      'liked_at': row['created_at'] as String, // 좋아요 누른 시간
-    })
+          'post_id': row['post_id'],
+          'liked_at': row['created_at'], // 좋아요 누른 시간
+        })
         .toList();
 
     if (likedPostsInfo.isEmpty) return [];
@@ -67,23 +67,28 @@ class _MyLikedPostListScreenState extends State<MyLikedPostListScreen> {
     final postList = await _client
         .from('community_posts')
         .select(
-        'id, title, content, created_at, category, author_name, likes_count, comments_count') // 필요한 컬럼만 선택
+          'id, title, content, created_at, category, author_name, likes_count, comments_count') // 필요한 컬럼만 선택
         .inFilter('id', postIds);
+
+    final typedPostList =
+      (postList as List).cast<Map<String, dynamic>>();
 
     // 3) 좋아요 누른 순서대로 정렬하기 위해, 좋아요 정보와 게시글 정보를 병합합니다.
     final List<Map<String, dynamic>> finalPosts = [];
+
     for (final info in likedPostsInfo) {
       final postId = info['post_id'];
-      final postData = (postList as List).firstWhere(
+      final Map<String, dynamic> postData = typedPostList.firstWhere(
             (post) => post['id'] == postId,
-        // 해당 게시글이 삭제되었을 경우를 대비하여 null을 반환
-        orElse: () => null,
+        orElse: () => <String, dynamic>{},
       );
 
-      if (postData != null) {
-        // 좋아요 누른 시점 필드 추가 (정렬 기준이 됨)
-        postData['liked_at'] = info['liked_at'];
-        finalPosts.add(postData as Map<String, dynamic>);
+      if (postData.isNotEmpty) {
+        // liked_at 정보 추가해서 새 Map으로 합치기
+        finalPosts.add({
+          ...postData,
+          'liked_at': info['liked_at'],
+        });
       }
     }
 
