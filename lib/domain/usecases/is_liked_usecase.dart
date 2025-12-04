@@ -1,4 +1,4 @@
-import '../../domain/repositories/community_repository.dart';
+import '../repositories/community_repository.dart';
 
 class IsLikedUseCase {
   final CommunityRepository repository;
