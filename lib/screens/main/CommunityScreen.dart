@@ -151,7 +151,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       elevation: 3,
       color: Colors.white,
       child: InkWell(
-        onTap: () {
+        onTap: ()  {
           final viewModel = Provider.of<CommunityViewModel>(
             context,
             listen: false,
@@ -182,6 +182,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
             ),
           );
+
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -374,7 +375,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               const SnackBar(content: Text('게시글이 작성되었습니다.')),
                             );
                           } else {
-                            // ... 오류 처리
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
