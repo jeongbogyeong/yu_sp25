@@ -26,6 +26,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     super.initState();
     // 화면이 로드될 때 게시글 목록 불러오기
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 💡 buildContext를 사용하므로 listen: false
       final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
       viewModel.loadPosts(limit: 20);
     });
@@ -51,8 +52,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 Consumer 대신 Provider.of(context)를 사용하되, listen: true를 유지하여 상태 변화에 반응
     final viewModel = Provider.of<CommunityViewModel>(context);
-    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
 
     return Scaffold(
       backgroundColor: _secondaryColor,
@@ -75,44 +76,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         ],
       ),
-      body: viewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : viewModel.errorMessage != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    viewModel.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => viewModel.loadPosts(limit: 20),
-                    child: const Text('다시 시도'),
-                  ),
-                ],
-              ),
-            )
-          : viewModel.posts.isEmpty
-          ? const Center(
-              child: Text(
-                '아직 게시글이 없습니다.\n첫 게시글을 작성해보세요!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: () => viewModel.loadPosts(limit: 20),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: viewModel.posts.length,
-                itemBuilder: (context, index) {
-                  return _buildPostCard(viewModel.posts[index], context);
-                },
-              ),
-            ),
-
+      body: _buildBody(viewModel), // 본문 위젯 분리
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // 새 글 작성 화면으로 이동
@@ -129,6 +93,54 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
+  // 게시글 목록 상태별 위젯 빌드
+  Widget _buildBody(CommunityViewModel viewModel) {
+    if (viewModel.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (viewModel.errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              // 오류가 발생하면 사용자에게 에러 메시지를 보여줍니다.
+              viewModel.errorMessage!,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => viewModel.loadPosts(limit: 20),
+              child: const Text('다시 시도'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (viewModel.posts.isEmpty) {
+      return const Center(
+        child: Text(
+          '아직 게시글이 없습니다.\n첫 게시글을 작성해보세요!',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => viewModel.loadPosts(limit: 20),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: viewModel.posts.length,
+        itemBuilder: (context, index) {
+          return _buildPostCard(viewModel.posts[index], context);
+        },
+      ),
+    );
+  }
+
   // ----------------------------------------------------
   // ✅ 게시글 카드 위젯 (Entity 사용)
   // ----------------------------------------------------
@@ -140,14 +152,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
       color: Colors.white,
       child: InkWell(
         onTap: () {
-          // 게시글 상세 화면으로 이동
           final viewModel = Provider.of<CommunityViewModel>(
             context,
             listen: false,
           );
+          // 1. 게시글 상세 정보 로드 (필요하다면)
           viewModel.loadPostDetail(post.id);
 
-          // 기존 PostDetailScreen이 Map을 받도록 되어 있으니 그대로 전달
+          // 2. 게시글 상세 화면으로 이동
+          // ⭐️ Map<String, dynamic>을 받도록 PostDetailScreen의 타입을 맞추기 위해 변환
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -156,11 +169,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   'id': post.id,
                   'title': post.title,
                   'content': post.content,
+                  // PostDetailScreen이 'user' 키를 작성자 이름으로 사용한다고 가정
                   'user': post.authorName,
-                  'time': _formatTime(post.createdAt),
+                  'time': _formatTime(post.createdAt), // 포맷된 시간
                   'likes': post.likesCount,
                   'comments': post.commentsCount,
                   'category': post.category,
+                  'authorId': post.authorId,
+                  // updatedAt 필드는 데이터베이스 스키마에 없지만 Entity에 있다면 포함 (있다면)
+                  // 'updatedAt': post.updatedAt.toIso8601String(),
                 },
               ),
             ),
@@ -270,12 +287,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
   // ✅ 새 글 작성 BottomSheet (ViewModel 사용)
   // ----------------------------------------------------
   void _showPostWriteSheet(BuildContext context) {
+    // 💡 listen: false 로 호출하여 불필요한 리빌드 방지
     final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
 
     String title = '';
     String content = '';
-    String category = '자유'; // 기본 카테고리
+    String category = '자유'; // 기본 카테고리 (필요하다면 드롭다운 등으로 변경 가능)
 
     showModalBottomSheet(
       context: context,
@@ -327,6 +345,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     child: ElevatedButton(
                       onPressed: () async {
                         if (title.isNotEmpty && content.isNotEmpty) {
+                          // 💡 UserViewModel에서 현재 user 정보 가져오기
                           final user = userViewModel.user;
                           if (user == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -336,20 +355,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             return;
                           }
 
+                          // 💡 user.id 와 user.name 을 사용하여 게시글 작성
                           final success = await viewModel.createPost(
                             title: title,
                             content: content,
-                            authorId: user.id,
-                            authorName: user.name,
+                            authorId: user.id, // UserEntity에서 ID 사용
+                            authorName:
+                                user.name ??
+                                '익명', // UserEntity에서 이름 사용 (null 대비)
                             category: category,
                           );
 
                           if (success) {
                             Navigator.pop(context);
+                            // 💡 새 게시글 작성 후 목록을 새로고침하여 즉시 반영
+                            await viewModel.loadPosts(limit: 20);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('게시글이 작성되었습니다.')),
                             );
                           } else {
+                            // ... 오류 처리
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -391,6 +416,4 @@ class _CommunityScreenState extends State<CommunityScreen> {
       },
     );
   }
-
-  // 🔥 예전 Map 기반 로컬 _posts 사용하던 _addPost 는 더 이상 쓰지 않으므로 삭제
 }
