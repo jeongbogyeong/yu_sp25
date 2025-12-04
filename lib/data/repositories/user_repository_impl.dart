@@ -9,16 +9,24 @@ class UserRepositoryImpl implements UserRepository {
 
   @override
   Future<UserEntity?> login(String email, String password) async {
-    return  await remoteDataSource.login(email, password);
+    return await remoteDataSource.login(email, password);
   }
 
   @override
-  Future<UserEntity?> signup(String email, String password,String name, int accountNumber) async {
+  Future<UserEntity?> signup(
+    String email,
+    String password,
+    String name,
+    int accountNumber,
+    String bankName,
+  ) async {
+    // remoteDataSource 에서 named parameter 로 받는 형태로 통일
     final response = await remoteDataSource.signup(
-        email: email,
-        password: password,
-        name: name,
-        accountNumber : accountNumber
+      email: email,
+      password: password,
+      name: name,
+      accountNumber: accountNumber,
+      bankName: bankName,
     );
     return response;
   }

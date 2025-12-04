@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:smartmoney/domain/usecases/stat_user.dart';
 import 'package:smartmoney/screens/ParentPage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'package:smartmoney/service/notification/notification_service.dart';
@@ -13,6 +13,7 @@ import 'package:smartmoney/screens/widgets/CommonDialog.dart';
 
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -24,8 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _isObscureText = true;
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); //  폼 유효성 검사를 위한 키
-
+  final GlobalKey<FormState> _formKey =
+      GlobalKey<FormState>(); //  폼 유효성 검사를 위한 키
 
   // ✨ UI 개선을 위한 색상 정의 (회원가입 화면과 동일)
   static const Color primaryColor = Color(0xFF4CAF50); // 가계부에 어울리는 녹색 계열
@@ -74,7 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
             },
           );
         });
-
       } else {
         throw Exception("Authentication failed, user data not returned.");
       }
@@ -82,16 +82,16 @@ class _LoginScreenState extends State<LoginScreen> {
       // ⚠️ 에러 처리 로직은 변경 없음
       String message = "알 수 없는 오류가 발생했습니다.";
 
-      if (e.toString().contains("Invalid login credentials") || e.toString().contains("Invalid email or password")) {
+      if (e.toString().contains("Invalid login credentials") ||
+          e.toString().contains("Invalid email or password")) {
         message = "이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.";
-      }
-      else if (e.toString().contains("User not found") || e.toString().contains("user-not-found")) {
+      } else if (e.toString().contains("User not found") ||
+          e.toString().contains("user-not-found")) {
         message = "해당 이메일로 등록된 사용자가 없습니다. 회원가입이 필요합니다.";
-      }
-      else if (e.toString().contains("User disabled") || e.toString().contains("user-disabled")) {
+      } else if (e.toString().contains("User disabled") ||
+          e.toString().contains("user-disabled")) {
         message = "사용이 정지된 계정입니다. 관리자에게 문의하세요.";
-      }
-      else {
+      } else {
         print("AuthException: $e");
         message = "인증 서비스 오류: ${e.toString()}";
       }
@@ -104,6 +104,46 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+
+  Future<void> _resetPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      CommonDialog.show(
+        context,
+        title: "이메일 필요",
+        content: "비밀번호 재설정을 위해 이메일 주소를 먼저 입력해주세요.",
+        isSuccess: false,
+      );
+      return;
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      await supabase.auth.resetPasswordForEmail(
+        email,
+        // redirectTo는 비워도 되지만, 나중에 웹/앱 연동할 거면 URL 넣어도 됨
+        // redirectTo: 'https://your-app-url.com/reset',
+      );
+
+      CommonDialog.show(
+        context,
+        title: "비밀번호 재설정 메일 발송 ✉️",
+        content: "입력하신 이메일($email)로 비밀번호 재설정 링크를 보냈습니다.\n메일함을 확인해주세요.",
+        isSuccess: true,
+        onConfirmed: () {}, // 그냥 닫기만
+      );
+    } catch (e) {
+      CommonDialog.show(
+        context,
+        title: "발송 실패 🚨",
+        content: "비밀번호 재설정 메일 발송 중 오류가 발생했습니다.\n${e.toString()}",
+        isSuccess: false,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -130,10 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           content: const Text(
             '알림을 받으려면 앱 설정에서 권한을 허용해야 합니다.',
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: 15,
-            ),
+            style: TextStyle(color: Colors.black54, fontSize: 15),
           ),
           actions: <Widget>[
             TextButton(
@@ -158,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.of(context).pop();
                 openAppSettings(); // 권한 설정 화면으로 이동
               },
-            )
+            ),
           ],
         ),
       );
@@ -174,7 +211,8 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Form( // ✨ Form 위젯으로 감싸서 유효성 검사 사용
+            child: Form(
+              // ✨ Form 위젯으로 감싸서 유효성 검사 사용
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -192,9 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text(
                     "Nudge_gap",
                     style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: primaryColor
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: primaryColor,
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -250,7 +288,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: const Text(
                         "로그인",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -265,19 +306,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => const SignUpScreen(),
+                            ),
                           );
                         },
                         child: const Text(
                           "신규 회원가입",
-                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const Text(" | ", style: TextStyle(color: Colors.grey)),
                       TextButton(
-                        onPressed: () {
-                          // 비밀번호 찾기 기능 구현
-                        },
+                        onPressed: _resetPassword,
                         child: const Text(
                           "비밀번호 찾기",
                           style: TextStyle(color: Colors.grey),
@@ -291,10 +335,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   // ----------------------------------------------------
                   // 소셜 로그인 섹션
                   // ----------------------------------------------------
-                  const Divider(height: 0, thickness: 1, indent: 20, endIndent: 20, color: Colors.grey),
+                  const Divider(
+                    height: 0,
+                    thickness: 1,
+                    indent: 20,
+                    endIndent: 20,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 24),
 
-                  const Text("간편 로그인", style: TextStyle(color: Colors.black54, fontSize: 16)),
+                  const Text(
+                    "간편 로그인",
+                    style: TextStyle(color: Colors.black54, fontSize: 16),
+                  ),
                   const SizedBox(height: 16),
 
                   // 소셜 로그인 버튼들 (네이버, 카카오, 구글)
@@ -303,24 +356,57 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       // Image.asset 경로는 실제 프로젝트에 맞게 수정 필요
                       LoginButton(
-                        image: Image.asset('assets/images/naver.png', width: 20, height: 20),
-                        text: const Text("네이버 로그인", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        image: Image.asset(
+                          'assets/images/naver.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                        text: const Text(
+                          "네이버 로그인",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         color: const Color(0xFF00BF18), // 네이버 색상
                         radius: 12.0,
                         onPressed: () {},
                       ),
                       const SizedBox(height: 12),
                       LoginButton(
-                        image: Image.asset('assets/images/kakao.png', width: 20, height: 20),
-                        text: const Text("카카오 로그인", style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold)),
+                        image: Image.asset(
+                          'assets/images/kakao.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                        text: const Text(
+                          "카카오 로그인",
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         color: const Color(0xFFFDDC3F), // 카카오 색상
                         radius: 12.0,
                         onPressed: () {},
                       ),
                       const SizedBox(height: 12),
                       LoginButton(
-                        image: Image.asset('assets/images/google.png', width: 20, height: 20),
-                        text: const Text("Google 로그인", style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold)),
+                        image: Image.asset(
+                          'assets/images/google.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                        text: const Text(
+                          "Google 로그인",
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         color: const Color(0xFFFFFFFF), // 구글은 흰색 배경
                         radius: 12.0,
                         onPressed: () {},
@@ -362,7 +448,10 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 10.0),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16.0,
+            horizontal: 10.0,
+          ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: primaryColor, width: 2),
@@ -400,7 +489,10 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 10.0),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16.0,
+            horizontal: 10.0,
+          ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: primaryColor, width: 2),
@@ -412,7 +504,9 @@ class _LoginScreenState extends State<LoginScreen> {
           errorStyle: const TextStyle(height: 0.5),
           suffixIcon: IconButton(
             icon: Icon(
-              _isObscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              _isObscureText
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
               color: primaryColor,
             ),
             onPressed: () {

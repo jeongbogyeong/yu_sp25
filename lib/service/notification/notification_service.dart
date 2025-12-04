@@ -7,10 +7,8 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import 'notification_definitions.dart';
 
-
 // 알림 기능을 캡슐화한 서비스 클래스
 class NotificationService {
-
   static final _notifications = FlutterLocalNotificationsPlugin();
 
   // ----------------------------------------------------
@@ -25,10 +23,11 @@ class NotificationService {
 
     // 2. 플랫폼별 설정
     const AndroidInitializationSettings androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     // iOS에서는 권한 요청이 필요합니다.
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings();
 
     const InitializationSettings settings = InitializationSettings(
       android: androidSettings,
@@ -47,19 +46,16 @@ class NotificationService {
     //4 android 알림 권한 요청
     await _notifications
         .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
 
-
     // 4. iOS/macOS 알림 권한 요청
-    _notifications.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>()?.requestPermissions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-
+    _notifications
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
 
     //5.알림 스케쥴 등록
     final prefs = await SharedPreferences.getInstance();
@@ -72,7 +68,6 @@ class NotificationService {
     }
   }
 
-
   static void scheduleNotificationByType(NotificationDefinition def) {
     final id = def.type;
     final title = "SmartMoney 알림: ${def.title}";
@@ -80,17 +75,41 @@ class NotificationService {
 
     switch (def.type) {
       case 0:
-        scheduleDailyNotification(id: id, title: title, body: body, time: const TimeOfDay(hour: 22, minute: 00));
+        scheduleDailyNotification(
+          id: id,
+          title: title,
+          body: body,
+          time: const TimeOfDay(hour: 22, minute: 00),
+        );
         break;
       case 1:
-        scheduleWeeklyNotification(id: id, title: title, body: body, day: Day.sunday);
+        scheduleWeeklyNotification(
+          id: id,
+          title: title,
+          body: body,
+          day: Day.sunday,
+        );
         break;
       case 2:
       case 4:
-        scheduleMonthlyNotification(id: id, title: title, body: body, dayOfMonth: 1, time: const TimeOfDay(hour: 9, minute: 0));
+        scheduleMonthlyNotification(
+          id: id,
+          title: title,
+          body: body,
+          dayOfMonth: 1,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        );
         break;
       case 3:
-        scheduleDailyNotification(id: id, title: title, body: body, time: const TimeOfDay(hour: 8, minute: 0));
+        scheduleDailyNotification(
+          id: id,
+          title: title,
+          body: body,
+          time: const TimeOfDay(hour: 8, minute: 0),
+        );
+        break;
+      case 5:
+        scheduleSpendingDelayNotification(id: id, title: title, body: body);
         break;
     }
   }
@@ -172,7 +191,8 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, // 매주 해당 요일 같은 시간에 반복
+      matchDateTimeComponents:
+          DateTimeComponents.dayOfWeekAndTime, // 매주 해당 요일 같은 시간에 반복
       payload: id.toString(),
     );
   }
@@ -198,7 +218,12 @@ class NotificationService {
     );
 
     // 만약 현재 날짜/시간이 예약 시간과 같거나 이미 지났다면, 다음 달로 넘깁니다.
-    if (scheduledDate.isBefore(now) || (scheduledDate.month == now.month && scheduledDate.day == now.day && (scheduledDate.hour < now.hour || (scheduledDate.hour == now.hour && scheduledDate.minute <= now.minute)))) {
+    if (scheduledDate.isBefore(now) ||
+        (scheduledDate.month == now.month &&
+            scheduledDate.day == now.day &&
+            (scheduledDate.hour < now.hour ||
+                (scheduledDate.hour == now.hour &&
+                    scheduledDate.minute <= now.minute)))) {
       // 다음 달 1일로 설정
       scheduledDate = tz.TZDateTime(
         tz.local,
@@ -229,6 +254,7 @@ class NotificationService {
       payload: id.toString(),
     );
   }
+
   // ----------------------------------------------------
   // ✅ 5. 알림 취소 (id를 통해 취소)
   // ----------------------------------------------------
@@ -239,5 +265,66 @@ class NotificationService {
   static Future<PermissionStatus> requestNotificationPermissions() async {
     final status = await Permission.notification.request();
     return status;
+  }
+
+  /// ✅ 6. 소비 기록이 2일 이상 없을 때만 울리는 알림
+  ///
+  /// SharedPreferences에 저장된 마지막 소비 기록 날짜(`last_spending_input`)를 읽어서
+  /// - 이미 2일 이상 지났으면: 지금 기준으로 몇 초 뒤에 바로 울리도록 예약
+  /// - 아직 2일이 안 됐으면: 2일이 되는 시점의 아침 9시에 한 번 울리도록 예약
+  static Future scheduleSpendingDelayNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastInputStr = prefs.getString('last_spending_input');
+
+    // 아직 한 번도 소비 기록을 안 한 사용자라면 굳이 알림 안 보냄
+    if (lastInputStr == null) return;
+
+    final lastInput = DateTime.tryParse(lastInputStr);
+    if (lastInput == null) return;
+
+    final now = tz.TZDateTime.now(tz.local);
+    final diffDays = now.difference(lastInput).inDays;
+
+    tz.TZDateTime scheduledDate;
+
+    if (diffDays >= 2) {
+      // 이미 2일 이상 안 썼으면, 바로(5초 후) 알림 한 번 울리기
+      scheduledDate = now.add(const Duration(seconds: 5));
+    } else {
+      // 아직 2일 안 지났으면, 2일이 되는 시점의 아침 9시에 한 번 울리게
+      final daysToWait = 2 - diffDays;
+      final targetDate = now.add(Duration(days: daysToWait));
+
+      scheduledDate = tz.TZDateTime(
+        tz.local,
+        targetDate.year,
+        targetDate.month,
+        targetDate.day,
+        9, // 아침 9시 (원하면 시간 바꿔도 됨)
+        0,
+      );
+    }
+
+    await _notifications.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'spending_delay_channel', // 채널 ID
+          '소비 기록 지연 알림', // 채널 이름
+          channelDescription: '2일 이상 소비 기록이 없을 때 알려주는 알림',
+          importance: Importance.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: id.toString(),
+    );
   }
 }

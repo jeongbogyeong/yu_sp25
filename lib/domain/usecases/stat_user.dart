@@ -3,13 +3,14 @@ import '../entities/spending_entitiy.dart';
 
 class StatUser {
   final StatRepository repository;
-  String _currentUserId ='1';
+  String _currentUserId = '1';
 
   StatUser(this.repository);
 
-  void setID(String id){
-    _currentUserId =id;
+  void setID(String id) {
+    _currentUserId = id;
   }
+
   String get currentUserId => _currentUserId;
 
   Future<List<SpendingEntity>> getStat(String uid) async {
@@ -34,7 +35,7 @@ class StatUser {
   // 카테고리별 목표
   int goalByType(List<SpendingEntity> list, int type) {
     final s = list.firstWhere(
-          (s) => s.type == type,
+      (s) => s.type == type,
       orElse: () => SpendingEntity(
         uid: _currentUserId, // 현재 유저 ID
         goal: 0,
@@ -48,7 +49,7 @@ class StatUser {
   // 카테고리별 지출
   int expenseByType(List<SpendingEntity> list, int type) {
     final s = list.firstWhere(
-          (s) => s.type == type,
+      (s) => s.type == type,
       orElse: () => SpendingEntity(
         uid: _currentUserId, // 현재 유저 ID
         goal: 0,

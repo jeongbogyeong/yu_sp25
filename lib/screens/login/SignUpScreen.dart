@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../viewmodels/TransactionViewModel.dart';
 import '../widgets/CommonDialog.dart';
 import '../../screens/ParentPage.dart';
 
@@ -75,8 +74,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       // int.parse() 대신 이미 숫자로 변환된 accountNumberInt를 사용합니다.
-      final userEntity = await userViewModel.signup(email, password, name, accountNumberInt);
-      final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
+      final userEntity = await userViewModel.signup(
+        email,
+        password,
+        name,
+        accountNumberInt,
+        bankName,
+      );
+
       if (userEntity != null) {
 
         // 1. ✅ 먼저 화면을 ParentPage로 교체하여 이동시킵니다. (자동 이동)
@@ -95,9 +100,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
             isSuccess: true,
             // 화면이 이미 이동했으므로, onConfirmed는 팝업을 닫는 역할만 수행합니다.
-            onConfirmed: () {
-              transactionViewModel.getTransactions(userEntity.id);
-            },
+            onConfirmed: () {},
           );
         });
 
@@ -195,6 +198,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       return '계좌번호는 숫자만 입력해야 합니다.';
                     }
                   }
+                  return null;
+                },
+              ), // ... 은행 이름 입력 필드
+              _buildTextFormField(
+                controller: bankNameController,
+                labelText: "은행 이름 (선택)",
+                icon: Icons.account_balance_outlined,
+                keyboardType: TextInputType.text,
+                validator: (value) {
+                  // 선택 입력이면 그냥 null 리턴해서 항상 통과
                   return null;
                 },
               ),
@@ -295,15 +308,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return TextFormField(
       controller: controller,
       obscureText: isConfirm ? true : _isObscureText,
-      validator: validator ?? (value) {
-        if (value == null || value.isEmpty) {
-          return '$labelText를 입력해주세요.';
-        }
-        if (value.length < 6) {
-          return '비밀번호는 6자 이상이어야 합니다.';
-        }
-        return null;
-      },
+      validator:
+          validator ??
+          (value) {
+            if (value == null || value.isEmpty) {
+              return '$labelText를 입력해주세요.';
+            }
+            if (value.length < 6) {
+              return '비밀번호는 6자 이상이어야 합니다.';
+            }
+            return null;
+          },
       decoration: InputDecoration(
         labelText: labelText,
         prefixIcon: const Icon(Icons.lock_outline, color: primaryColor),
@@ -313,7 +328,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 10.0),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16.0,
+          horizontal: 10.0,
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: primaryColor, width: 2),
@@ -326,16 +344,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
         suffixIcon: isConfirm
             ? null
             : IconButton(
-          icon: Icon(
-            _isObscureText ? Icons.visibility_off : Icons.visibility,
-            color: primaryColor,
-          ),
-          onPressed: () {
-            setState(() {
-              _isObscureText = !_isObscureText;
-            });
-          },
-        ),
+                icon: Icon(
+                  _isObscureText ? Icons.visibility_off : Icons.visibility,
+                  color: primaryColor,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isObscureText = !_isObscureText;
+                  });
+                },
+              ),
       ),
     );
   }

@@ -9,11 +9,13 @@ class AuthCheckScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
+    final session = Supabase.instance.client.auth.currentSession;
 
-    if (user == null) {
+    if (session == null) {
+      // 로그인 안 된 상태
       return const LoginScreen();
     }
+    // 로그인 유지된 상태 (자동 로그인)
     return const ParentPage();
   }
 }

@@ -3,16 +3,16 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:smartmoney/screens/login/LoginScreen.dart';
 
-//ViewModel
+// ViewModel
 import '../../service/notification/notification_service.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
-
+import '../login/PasswordReset.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
 const Color _secondaryColor = Color(0xFFF0F4F8); // 배경색
-const Color _expenseColor = Color(0xFFEF5350); // 지출 강조 (빨간색 계열)
+const Color _expenseColor = Color(0xFFEF5350); // 지출/위험 계열 (빨간색)
 
 class MyPageScreen extends StatelessWidget {
   const MyPageScreen({super.key});
@@ -49,16 +49,28 @@ class MyPageScreen extends StatelessWidget {
             _buildSummaryCard(), // ✅ 이번 달 요약 카드
             const SizedBox(height: 24),
 
-            _buildMenuSection("계정 및 설정"),
+            // ===== 정보 변경 =====
+            _buildMenuSection("정보 변경"),
             _buildMenuDivider(),
-
-            _buildMenuList(context), // ✅ 메뉴 리스트
+            _buildInfoChangeCard(context),
             const SizedBox(height: 24),
 
+            // ===== My 게시판 활동 =====
+            _buildMenuSection("My 게시판 활동"),
+            _buildMenuDivider(),
+            _buildBoardActivityCard(context),
+            const SizedBox(height: 24),
+
+            // ===== My 지출 =====
+            _buildMenuSection("My 지출"),
+            _buildMenuDivider(),
+            _buildSpendingCard(context),
+            const SizedBox(height: 24),
+
+            // ===== 로그아웃 =====
             _buildMenuSection("로그아웃"),
             _buildMenuDivider(),
-
-            _buildLogoutTile(context), // ✅ 로그아웃 버튼
+            _buildLogoutTile(context),
             const SizedBox(height: 40),
           ],
         ),
@@ -67,23 +79,17 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 1. 프로필 영역 (Profile Area) - 디자인 개선
+  // ✅ 1. 프로필 영역 (Profile Area)
   // ----------------------------------------------------
   Widget _buildProfileArea() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-      // 배경색 제거, 깔끔하게 흰색 위에 위치
       child: Row(
         children: [
           CircleAvatar(
             radius: 36,
             backgroundColor: _primaryColor.withOpacity(0.1),
-            child: Icon(
-              Icons.person_rounded,
-              size: 40,
-              color: _primaryColor,
-            ), // ✨ 기본 아이콘 사용
-            // backgroundImage: AssetImage("assets/images/profile.png"),
+            child: Icon(Icons.person_rounded, size: 40, color: _primaryColor),
           ),
           const SizedBox(width: 16),
           Consumer<UserViewModel>(
@@ -92,7 +98,7 @@ class MyPageScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vm.user!.name,
+                    vm.user?.name ?? 'User',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -101,7 +107,7 @@ class MyPageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    vm.user!.email,
+                    vm.user?.email ?? '',
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],
@@ -109,30 +115,20 @@ class MyPageScreen extends StatelessWidget {
             },
           ),
           const Spacer(),
-          // 프로필 수정 버튼
-          IconButton(
-            icon: const Icon(Icons.edit_rounded, color: Colors.grey),
-            onPressed: () {
-              // 프로필 수정 기능
-            },
-          ),
+          // 프로필 수정은 아래 메뉴(정보 변경 섹션)로 빼서 관리
         ],
       ),
     );
   }
 
   // ----------------------------------------------------
-  // ✅ 2. 이번 달 요약 카드 (Summary Card) - 디자인 개선
+  // ✅ 2. 이번 달 요약 카드 (Summary Card)
   // ----------------------------------------------------
   Widget _buildSummaryCard() {
     return Card(
       margin: EdgeInsets.zero,
-      // 바깥 여백은 Column Padding에서 처리
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16), // ✨ 모서리 둥글게
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
-      // ✨ 그림자 강화
       color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -153,7 +149,7 @@ class MyPageScreen extends StatelessWidget {
               children: [
                 _summaryItem("수입", _income, _primaryColor),
                 _summaryItem("지출", _expense, _expenseColor),
-                _summaryItem("잔액", _balance, Colors.blueAccent), // 잔액은 파란색 계열
+                _summaryItem("잔액", _balance, Colors.blueAccent),
               ],
             ),
           ],
@@ -189,7 +185,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 3. 메뉴 리스트 (Menu List) - 디자인 개선
+  // ✅ 공통: 섹션 제목 / Divider
   // ----------------------------------------------------
   Widget _buildMenuSection(String title) {
     return Padding(
@@ -209,36 +205,6 @@ class MyPageScreen extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.only(left: 4.0, right: 4.0),
       child: Divider(height: 1, thickness: 0.5, color: Colors.black12),
-    );
-  }
-
-  Widget _buildMenuList(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      color: Colors.white,
-      child: Column(
-        children: [
-          _buildMenuTile(context, Icons.category_rounded, "카테고리 관리",() {}),
-          _buildMenuDivider(),
-          _buildMenuTile(
-            context,
-            Icons.account_balance_wallet_rounded,
-            "자산 계좌 관리",
-            () {},
-          ),
-          _buildMenuDivider(),
-          _buildMenuTile(context, Icons.bar_chart_rounded, "통계 보기", () {}),
-          _buildMenuDivider(),
-          _buildMenuTile(context, Icons.notifications, "알림 설정",
-                  () => Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const NotificationSettingsScreen())
-              )),
-
-          // 텍스트 수정
-        ],
-      ),
     );
   }
 
@@ -265,6 +231,124 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
+  // ✅ 정보 변경 카드
+  //   - 비밀번호 재설정
+  //   - 프로필 수정
+  //   - 알림 설정 (기존 기능 유지)
+  // ----------------------------------------------------
+  Widget _buildInfoChangeCard(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      color: Colors.white,
+      child: Column(
+        children: [
+          _buildMenuTile(context, Icons.lock_reset_rounded, "비밀번호 재설정", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PasswordResetScreen()),
+            );
+          }),
+          _buildMenuDivider(),
+          _buildMenuTile(context, Icons.person_outline_rounded, "프로필 수정", () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("프로필 수정 화면은 아직 준비 중입니다.")),
+            );
+          }),
+          _buildMenuDivider(),
+          _buildMenuTile(
+            context,
+            Icons.notifications,
+            "알림 설정",
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NotificationSettingsScreen(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
+  // ✅ My 게시판 활동 카드
+  //   - 내가 쓴 댓글
+  //   - 내가 달았던 좋아요
+  //   - 내가 쓴 게시물
+  // ----------------------------------------------------
+  Widget _buildBoardActivityCard(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      color: Colors.white,
+      child: Column(
+        children: [
+          _buildMenuTile(context, Icons.comment_rounded, "내가 쓴 댓글", () {
+            // TODO: 내가 쓴 댓글 목록 화면 이동
+          }),
+          _buildMenuDivider(),
+          _buildMenuTile(
+            context,
+            Icons.thumb_up_alt_outlined,
+            "내가 달았던 좋아요",
+            () {
+              // TODO: 내가 좋아요한 게시글 목록
+            },
+          ),
+          _buildMenuDivider(),
+          _buildMenuTile(context, Icons.post_add_rounded, "내가 쓴 게시물", () {
+            // TODO: 내가 쓴 게시글 목록
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
+  // ✅ My 지출 카드
+  //   - 카테고리 관리
+  //   - 자산 계좌 관리
+  //   - 통계 보기
+  //   - 목표 금액 변경
+  // ----------------------------------------------------
+  Widget _buildSpendingCard(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      color: Colors.white,
+      child: Column(
+        children: [
+          _buildMenuTile(context, Icons.category_rounded, "카테고리 관리", () {
+            // TODO: 카테고리 관리 화면
+          }),
+          _buildMenuDivider(),
+          _buildMenuTile(
+            context,
+            Icons.account_balance_wallet_rounded,
+            "자산 계좌 관리",
+            () {
+              // TODO: 자산 계좌 관리 화면
+            },
+          ),
+          _buildMenuDivider(),
+          _buildMenuTile(context, Icons.bar_chart_rounded, "통계 보기", () {
+            // TODO: 통계 화면
+          }),
+          _buildMenuDivider(),
+          _buildMenuTile(context, Icons.flag_rounded, "목표 금액 변경", () {
+            // TODO: 목표 금액 변경 화면
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------------------------------
   // ✅ 4. 로그아웃 버튼
   // ----------------------------------------------------
   Widget _buildLogoutTile(BuildContext context) {
@@ -284,8 +368,9 @@ class MyPageScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
+
               await Future.microtask(() {
-                // 3.  UserViewModel 상태 정리
+                // TODO: UserViewModel 상태 정리 (토큰/유저 정보 초기화 등)
               });
             }
           } catch (e) {
