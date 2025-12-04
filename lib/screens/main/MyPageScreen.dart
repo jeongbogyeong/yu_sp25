@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:smartmoney/screens/login/LoginScreen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ViewModel
 import '../../service/notification/notification_service.dart';
+import '../MyCommunity/MyCommentListScreen.dart';
+import '../MyCommunity/MyLikedPostListScreen.dart';
+import '../MyCommunity/MyPostListScreen.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
