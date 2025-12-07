@@ -15,6 +15,7 @@ import '../MyCommunity/MyPostListScreen.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
+import 'ExpensePlanScreen.dart';
 
 // 수입 설정 / 조회 화면
 import 'MyIncomeScreen.dart';
@@ -346,12 +347,7 @@ class MyPageScreen extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const PasswordResetScreen()),
             );
           }),
-          _buildMenuDivider(),
-          _buildMenuTile(context, Icons.person_outline_rounded, "프로필 수정", () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("프로필 수정 화면은 아직 준비 중입니다.")),
-            );
-          }),
+
           _buildMenuDivider(),
           _buildMenuTile(
             context,
@@ -433,8 +429,11 @@ class MyPageScreen extends StatelessWidget {
       color: Colors.white,
       child: Column(
         children: [
-          _buildMenuTile(context, Icons.category_rounded, "카테고리 관리", () {
-            // TODO
+          _buildMenuTile(context, Icons.category_rounded, "소비 계획 세우기", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ExpensePlanScreen()),
+            );
           }),
           _buildMenuDivider(),
           _buildMenuTile(
