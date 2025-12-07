@@ -142,56 +142,60 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _secondaryColor,
-      appBar: AppBar(
-        title: const Text("목표 금액 설정"),
-        backgroundColor: _secondaryColor,
-        elevation: 1,
-        titleTextStyle: const TextStyle(
-          color: Colors.black87,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        actions: [
-          TextButton(
-            onPressed: _saveGoals,
-            child: const Text("저장", style: TextStyle(color: _primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. 전체 목표 설정 카드
-            _buildGoalInputCard("총 목표 금액", _overallGoalController, Icons.monetization_on),
-            const SizedBox(height: 30),
-
-            // 2. 카테고리별 목표 설정
-            const Text(
-              "카테고리별 목표 금액 (선택 사항)",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+    return SafeArea(
+        child: Scaffold(
+          backgroundColor: _secondaryColor,
+          appBar: AppBar(
+            leading: BackButton(
+              color: Colors.black, // 원하는 색
             ),
-            const Divider(height: 20, thickness: 0.5, color: Colors.black12),
+            title: const Text("목표 금액 설정"),
+            backgroundColor: _secondaryColor,
+            elevation: 1,
+            titleTextStyle: const TextStyle(
+              color: Colors.black87,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            actions: [
+              TextButton(
+                onPressed: _saveGoals,
+                child: const Text("저장", style: TextStyle(color: _primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. 전체 목표 설정 카드
+                _buildGoalInputCard("총 목표 금액", _overallGoalController, Icons.monetization_on),
+                const SizedBox(height: 30),
 
-            // 카테고리별 입력 필드 리스트
-            ...categoryNames.entries.map((entry) {
-              final key = entry.key;
-              final name = entry.value;
-              final color = categoryColors[key];
-              final isEtc = (key == 10); // '기타' 카테고리는 유효성 검사에서 제외되므로 별도 표시
+                // 2. 카테고리별 목표 설정
+                const Text(
+                  "카테고리별 목표 금액 (선택 사항)",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const Divider(height: 20, thickness: 0.5, color: Colors.black12),
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 15.0),
-                child: _buildCategoryGoalInput(key, name, _categoryGoalControllers[key]!, color!, isEtc),
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
+                // 카테고리별 입력 필드 리스트
+                ...categoryNames.entries.map((entry) {
+                  final key = entry.key;
+                  final name = entry.value;
+                  final color = categoryColors[key];
+                  final isEtc = (key == 10); // '기타' 카테고리는 유효성 검사에서 제외되므로 별도 표시
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 15.0),
+                    child: _buildCategoryGoalInput(key, name, _categoryGoalControllers[key]!, color!, isEtc),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        ));
   }
 
   // 목표 금액 입력 필드 위젯 빌더 (전체 목표용)

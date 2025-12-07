@@ -1,3 +1,5 @@
+import 'package:image_picker/image_picker.dart';
+
 import '../entities/user_entity.dart';
 
 abstract class UserRepository {
@@ -13,5 +15,11 @@ abstract class UserRepository {
     String incomeType, // ← 추가
   );
 
+  Future<String> uploadProfileImage(String userId, XFile file);
+
+  Future<void> updatePhotoUrl(String uid, String url);
+  Future<UserEntity?> getUserByEmail(String email);
   Future<void> logout();
+
+
 }

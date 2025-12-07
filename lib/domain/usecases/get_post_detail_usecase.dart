@@ -1,5 +1,5 @@
-import '../../domain/entities/community_post_entity.dart';
-import '../../domain/repositories/community_repository.dart';
+import '../entities/community_post_entity.dart';
+import '../repositories/community_repository.dart';
 
 class GetPostDetailUseCase {
   final CommunityRepository repository;

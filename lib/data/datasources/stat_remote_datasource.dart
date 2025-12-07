@@ -6,6 +6,7 @@ class StatRemoteDataSource {
   final SupabaseClient client;
   StatRemoteDataSource(this.client);
 
+
   Future<List<SpendingEntity>> getSpending(String uid) async {
     try {
       final result = await client
@@ -13,7 +14,7 @@ class StatRemoteDataSource {
           .select()
           .eq('uid', uid);
 
-      // ✅ 데이터가 없으면 기본 5개 생성
+      // ✅ 데이터가 없으면 기본 11개 생성
       if (result.isEmpty) {
         return await _initializeDefaultSpendingGoals(uid);
       }
@@ -33,24 +34,18 @@ class StatRemoteDataSource {
     }
   }
 
-  Future<List<SpendingEntity>> _initializeDefaultSpendingGoals(
-    String uid,
-  ) async {
-    final List<SpendingEntity> defaultList = List.generate(5, (i) {
+  Future<List<SpendingEntity>> _initializeDefaultSpendingGoals(String uid) async {
+    final List<SpendingEntity> defaultList = List.generate(11, (i) {
       return SpendingEntity(uid: uid, goal: 0, spending: 0, type: i);
     });
 
     // Supabase에 삽입
-    final insertData = defaultList
-        .map(
-          (e) => {
-            'uid': e.uid,
-            'goal': e.goal,
-            'spending': e.spending,
-            'type': e.type,
-          },
-        )
-        .toList();
+    final insertData = defaultList.map((e) => {
+      'uid': e.uid,
+      'goal': e.goal,
+      'spending': e.spending,
+      'type': e.type,
+    }).toList();
 
     await client.from('spendingGoal_table').insert(insertData);
     return defaultList;
@@ -61,10 +56,10 @@ class StatRemoteDataSource {
       final response = await client
           .from('spendingGoal_table')
           .update({
-            'goal': spending.goal,
-            'spending': spending.spending,
-            'type': spending.type,
-          })
+        'goal': spending.goal,
+        'spending': spending.spending,
+        'type': spending.type,
+      })
           .eq('uid', spending.uid)
           .eq('type', spending.type)
           .select();
@@ -75,4 +70,5 @@ class StatRemoteDataSource {
       return false;
     }
   }
+
 }

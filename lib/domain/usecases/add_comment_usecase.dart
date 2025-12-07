@@ -1,5 +1,5 @@
-import '../../domain/entities/comment_entity.dart';
-import '../../domain/repositories/community_repository.dart';
+import '../entities/comment_entity.dart';
+import '../repositories/community_repository.dart';
 
 class AddCommentUseCase {
   final CommunityRepository repository;

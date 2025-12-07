@@ -6,6 +6,7 @@ class UserEntity {
   final String email;
   final int account_number;
   final String? bankName;
+  final String? photoUrl;
 
   // 🔥 새 필드: 주 수입원 (ENUM 문자열)
   final String incomeType; // PART_TIME / SALARY / ALLOWANCE

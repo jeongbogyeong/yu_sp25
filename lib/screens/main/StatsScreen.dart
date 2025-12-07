@@ -172,9 +172,15 @@ class StatsScreen extends StatelessWidget {
   // ----------------------------------------------------
   Widget _buildCategoryProgressCard(BuildContext context, StatViewModel vm) {
     // ✅ 목표 금액이 0보다 큰 카테고리만 필터링
-    final relevantGoals = vm.categoryGoals.entries.where((entry) => entry.value > 0.0).toList();
+    final relevantCategories = vm.categoryGoals.entries.where((entry) {
+      final key = entry.key;
+      final goal = entry.value;
+      final expense = vm.categoryExpenses[key] ?? 0.0;
 
-    if (relevantGoals.isEmpty) {
+      return goal > 0.0 || expense > 0.0;
+    }).toList();
+
+    if (relevantCategories.isEmpty) {
       return const Card(
         shape: _cardShape,
         elevation: _cardElevation,
@@ -202,7 +208,7 @@ class StatsScreen extends StatelessWidget {
             ),
             const Divider(height: 20, thickness: 0.5, color: Colors.black12),
             // ✅ 필터링된 리스트 사용
-            ...relevantGoals.map((entry) {
+            ...relevantCategories.map((entry) {
               final key = entry.key;
               final goal = entry.value;
               final expense = vm.categoryExpenses[key] ?? 0.0;

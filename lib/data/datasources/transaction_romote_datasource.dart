@@ -49,7 +49,9 @@ class TransactionRomoteDatasource {
 
   Future<TransactionEntity?> insertTransaction(TransactionEntity transaction) async {
     try {
-      final response = await client.from('transaction_table').insert({
+      final response = await client
+          .from('transaction_table')
+          .insert({
         'accountNumber': transaction.accountNumber,
         'categoryId': transaction.categoryId,
         'amount': transaction.amount,
@@ -57,41 +59,93 @@ class TransactionRomoteDatasource {
         'createdAt': transaction.createdAt,
         'assetId': transaction.assetId,
       })
-      .select();
-      if (response.isEmpty ||response.isEmpty) {
-        return null;
-      }
-      final Map<String, dynamic> insertedData = response[0];
+          .select();
 
-      // Entity를 재구성하여 ID를 포함한 완벽한 객체를 반환합니다.
+      if (response.isEmpty) return null;
+
+      final data = response[0];
+
       return TransactionEntity(
-        id: insertedData['id'] as int? ?? 0, // DB에서 할당된 실제 ID
-        accountNumber: insertedData['accountNumber']as int? ?? 0,
-        categoryId: insertedData['categoryId']as int? ?? 0,
-        amount: insertedData['amount']as int? ?? 0,
-        memo: insertedData['memo']as String? ?? '',
-        createdAt: insertedData['createdAt']as String? ?? '',
-        assetId: insertedData['assetId']as int? ?? 0,
+        id: data['id'] ?? 0,
+        accountNumber: data['accountNumber'] ?? 0,
+        categoryId: data['categoryId'] ?? 0,
+        amount: data['amount'] ?? 0,
+        memo: data['memo'] ?? '',
+        createdAt: data['createdAt'] ?? '',
+        assetId: data['assetId'] ?? 0,
       );
-
     } catch (e) {
       print('❌ insertTransaction error: $e');
       return null;
     }
   }
+
   Future<bool> deleteTransaction(int id) async {
     try {
-      print("삭제아이디 $id");
+      // 1) 삭제할 트랜잭션 정보를 먼저 가져오기
+      final transactionResult = await client
+          .from('transaction_table')
+          .select('accountNumber, categoryId, amount')
+          .eq('transactionId', id);
+
+      if (transactionResult.isEmpty) {
+        print('❌ 삭제할 transaction을 찾을 수 없음');
+        return false;
+      }
+
+      final int accountNumber = transactionResult[0]['accountNumber'];
+      final int categoryId = transactionResult[0]['categoryId'];
+      final int amount = transactionResult[0]['amount'];
+
+      // 2) 트랜잭션 삭제
       await client
           .from('transaction_table')
           .delete()
-          .eq('transactionId', id); // 'id' 컬럼이 주어진 id와 같은 행을 선택
-      return true;
+          .eq('transactionId', id);
 
+      // 3) 지출(0~10)이었다면 spendingGoal_table 에서 금액 감소
+     /* if (categoryId <= 10) {
+        // uid 조회
+        final userResult = await client
+            .from('userInfo_table')
+            .select('uid')
+            .eq('accountNumber', accountNumber);
+
+        if (userResult.isNotEmpty) {
+          final uid = userResult[0]['uid'];
+
+          // 현재 spending 값 가져오기
+          final goalResult = await client
+              .from('spendingGoal_table')
+              .select('spending')
+              .eq('uid', uid)
+              .eq('type',categoryId );
+
+          int current = 0;
+          if (goalResult.isNotEmpty) {
+            current = goalResult[0]['spending'] ?? 0;
+          }
+
+          // 4) spending 값 감소 (음수 방지)
+          int updated = current + amount;
+          if (updated < 0) updated = 0;
+
+          await client
+              .from('spendingGoal_table')
+              .update({
+            'spending': updated,
+          })
+              .eq('uid', uid)
+              .eq('type',categoryId );
+        }
+      }*/
+
+      return true;
     } catch (e) {
       print('❌ DeleteTransaction error: $e');
       return false;
     }
   }
+
 
 }

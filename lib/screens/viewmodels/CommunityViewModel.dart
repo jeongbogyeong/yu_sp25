@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart';
 import '../../domain/entities/community_post_entity.dart';
 import '../../domain/entities/comment_entity.dart';
-import '../../data/usecases/get_community_posts_usecase.dart';
-import '../../data/usecases/get_post_detail_usecase.dart';
-import '../../data/usecases/create_post_usecase.dart';
-import '../../data/usecases/update_post_usecase.dart';
-import '../../data/usecases/delete_post_usecase.dart';
-import '../../data/usecases/get_comments_usecase.dart';
-import '../../data/usecases/add_comment_usecase.dart';
-import '../../data/usecases/delete_comment_usecase.dart';
-import '../../data/usecases/toggle_like_usecase.dart';
-import '../../data/usecases/is_liked_usecase.dart';
+import '../../domain/usecases/get_community_posts_usecase.dart';
+import '../../domain/usecases/get_post_detail_usecase.dart';
+import '../../domain/usecases/create_post_usecase.dart';
+import '../../domain/usecases/update_post_usecase.dart';
+import '../../domain/usecases/delete_post_usecase.dart';
+import '../../domain/usecases/get_comments_usecase.dart';
+import '../../domain/usecases/add_comment_usecase.dart';
+import '../../domain/usecases/delete_comment_usecase.dart';
+import '../../domain/usecases/toggle_like_usecase.dart';
+import '../../domain/usecases/is_liked_usecase.dart';
 
 class CommunityViewModel with ChangeNotifier {
   // UseCases

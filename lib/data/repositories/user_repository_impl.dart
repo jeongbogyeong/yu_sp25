@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:smartmoney/data/datasources/user_remote_datasource.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/user_repository.dart';
@@ -33,6 +34,18 @@ class UserRepositoryImpl implements UserRepository {
     return response;
   }
 
+  @override
+  Future<String> uploadProfileImage(String userId, XFile file) async{
+    return await remoteDataSource.uploadProfileImage(userId, file);
+  }
+  @override
+  Future<void> updatePhotoUrl(String uid, String url) async{
+    await remoteDataSource.updatePhotoUrl(uid, url);
+  }
+  @override
+  Future<UserEntity?> getUserByEmail(String email) async {
+      return await remoteDataSource.getUserByEmail(email);
+  }
   @override
   Future<void> logout() async {
     await remoteDataSource.logout();
