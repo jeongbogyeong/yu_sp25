@@ -18,12 +18,14 @@ class UserViewModel with ChangeNotifier {
     return _user;
   }
 
+  // ✅ incomeType 추가됨
   Future<UserEntity?> signup(
     String email,
     String password,
     String name,
     int accountNumber,
     String bankName,
+    String incomeType, // <-- 추가된 부분
   ) async {
     _user = await userInfoUser.signup(
       email,
@@ -31,6 +33,7 @@ class UserViewModel with ChangeNotifier {
       name,
       accountNumber,
       bankName,
+      incomeType, // <-- 전달
     );
     notifyListeners();
     return _user;

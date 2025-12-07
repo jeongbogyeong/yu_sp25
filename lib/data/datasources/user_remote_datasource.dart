@@ -40,7 +40,9 @@ class UserRemoteDataSource {
         email: data['email'] as String,
         account_number: data['accountNumber'] as int,
         bankName: data['bankName'] as String?,
-        photoUrl:data['photoUrl'] as String?// 👈 Supabase 컬럼 bankName
+        incomeType:
+            data['incomeType'] as String? ??
+            'PART_TIME', // 🔥 ENUM 컬럼 읽어오기 (기본값 하나 넣어줌)
       );
     } catch (e) {
       print("로그인 에러 발생: $e");
@@ -58,6 +60,7 @@ class UserRemoteDataSource {
     required String name,
     required int accountNumber,
     required String bankName,
+    required String incomeType, // 🔥 추가
   }) async {
     try {
       // 1) 이메일 중복 체크
@@ -105,7 +108,8 @@ class UserRemoteDataSource {
         'name': name,
         'email': email,
         'accountNumber': accountNumber,
-        'bankName': bankName, // 👈 컬럼명 bankName 으로 저장
+        'bankName': bankName,
+        'incomeType': incomeType, // 🔥 ENUM 컬럼 저장
       });
 
       // 3) UserEntity 반환
@@ -115,6 +119,7 @@ class UserRemoteDataSource {
         email: email,
         account_number: accountNumber,
         bankName: bankName,
+        incomeType: incomeType,
       );
     } catch (e) {
       print("회원가입 에러 발생: $e");

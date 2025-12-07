@@ -1,3 +1,4 @@
+// lib/screens/main/MyPageScreen.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,10 @@ import '../MyCommunity/MyPostListScreen.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
+
+// 🔹 수입 설정 / 조회 화면
+import 'MyIncomeScreen.dart';
+import 'IncomeListScreen.dart';
 
 // ✨ 테마 색상 정의 (다른 화면과 통일)
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
@@ -52,6 +57,12 @@ class MyPageScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             _buildSummaryCard(), // ✅ 이번 달 요약 카드
+            const SizedBox(height: 24),
+
+            // ===== My 수입 · 월급 설정 =====
+            _buildMenuSection("My 수입 · 월급 설정"),
+            _buildMenuDivider(),
+            _buildIncomeSettingCard(context),
             const SizedBox(height: 24),
 
             // ===== 정보 변경 =====
@@ -94,12 +105,24 @@ class MyPageScreen extends StatelessWidget {
             final picker = ImagePicker();
             final picked = await picker.pickImage(source: ImageSource.gallery);
 
-            if (picked == null) return;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: _primaryColor.withOpacity(0.1),
+            child: Icon(Icons.person_rounded, size: 40, color: _primaryColor),
+          ),
+          const SizedBox(width: 16),
+          Consumer<UserViewModel>(
+            builder: (context, vm, child) {
+              String? name = vm.user?.name;
+              name ??= session?.user.userMetadata?['name'] as String?;
+              name ??= session?.user.email?.split('@').first;
+              name ??= 'User';
 
-            final userId = vm.user!.id;
-
-            // Storage 업로드
-            final imageUrl = await vm.uploadProfileImage(userId, picked);
+              String? email = vm.user?.email ?? session?.user.email ?? '';
 
             // DB 업데이트 + ViewModel 업데이트
             await vm.updateProfileImage(imageUrl);
@@ -245,6 +268,7 @@ class MyPageScreen extends StatelessWidget {
     String title,
     VoidCallback onTap, {
     Color iconColor = _primaryColor,
+    String? subtitle,
   }) {
     return ListTile(
       leading: Icon(icon, color: iconColor),
@@ -252,12 +276,61 @@ class MyPageScreen extends StatelessWidget {
         title,
         style: const TextStyle(fontSize: 16, color: Colors.black87),
       ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
       trailing: const Icon(
         Icons.chevron_right_rounded,
         size: 24,
         color: Colors.grey,
       ),
       onTap: onTap,
+    );
+  }
+
+  // ----------------------------------------------------
+  // ✅ My 수입 · 월급 설정 카드
+  //   - 주 수입원 · 월급 설정 (MyIncomeScreen)
+  //   - 내 모든 수입원 (IncomeListScreen)
+  // ----------------------------------------------------
+  Widget _buildIncomeSettingCard(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      color: Colors.white,
+      child: Column(
+        children: [
+          _buildMenuTile(
+            context,
+            Icons.account_balance_wallet_outlined,
+            "주 수입원 · 월급 설정",
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyIncomeScreen()),
+              );
+            },
+            subtitle: "월급날과 주 수입원을 설정해요.",
+          ),
+          _buildMenuDivider(),
+          _buildMenuTile(
+            context,
+            Icons.list_alt_outlined,
+            "내 모든 수입원 보기",
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const IncomeListScreen()),
+              );
+            },
+            subtitle: "월급과 추가 수입원을 한눈에 확인해요.",
+          ),
+        ],
+      ),
     );
   }
 
@@ -306,7 +379,6 @@ class MyPageScreen extends StatelessWidget {
 
   // ----------------------------------------------------
   // ✅ My 게시판 활동 카드
-  //   - Supabase 세션 기준으로 userId 사용 (앱 재실행에도 유지)
   // ----------------------------------------------------
   Widget _buildBoardActivityCard(BuildContext context) {
     final session = Supabase.instance.client.auth.currentSession;
@@ -401,7 +473,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 4. 로그아웃 버튼
+  // ✅ 로그아웃 버튼
   // ----------------------------------------------------
   Widget _buildLogoutTile(BuildContext context) {
     return Card(
@@ -411,9 +483,7 @@ class MyPageScreen extends StatelessWidget {
       color: Colors.white,
       child: _buildMenuTile(context, Icons.logout_rounded, "로그아웃", () async {
         try {
-          // Supabase 세션 로그아웃
           await Supabase.instance.client.auth.signOut();
-          // ViewModel 상태 정리
           await context.read<UserViewModel>().logout();
 
           if (context.mounted) {
