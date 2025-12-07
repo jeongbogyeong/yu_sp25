@@ -12,8 +12,16 @@ class UserInfoUser {
     String name,
     int accountNumber,
     String bankName,
+    String incomeType, // <-- 추가된 부분
   ) {
-    return repository.signup(email, password, name, accountNumber, bankName);
+    return repository.signup(
+      email,
+      password,
+      name,
+      accountNumber,
+      bankName,
+      incomeType,
+    );
   }
 
   Future<void> logout() {
