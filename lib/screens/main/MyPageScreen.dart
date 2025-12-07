@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:smartmoney/screens/login/LoginScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// ViewModel
+import 'package:smartmoney/screens/login/LoginScreen.dart';
+
+// ViewModel & Screens
 import '../../service/notification/notification_service.dart';
 import '../MyCommunity/MyCommentListScreen.dart';
 import '../MyCommunity/MyLikedPostListScreen.dart';
@@ -15,19 +16,19 @@ import '../viewmodels/UserViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
 
-// 🔹 수입 설정 / 조회 화면
+// 수입 설정 / 조회 화면
 import 'MyIncomeScreen.dart';
 import 'IncomeListScreen.dart';
 
-// ✨ 테마 색상 정의 (다른 화면과 통일)
-const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
-const Color _secondaryColor = Color(0xFFF0F4F8); // 배경색
-const Color _expenseColor = Color(0xFFEF5350); // 지출/위험 계열 (빨간색)
+// ✨ 테마 색상 정의
+const Color _primaryColor = Color(0xFF4CAF50);
+const Color _secondaryColor = Color(0xFFF0F4F8);
+const Color _expenseColor = Color(0xFFEF5350);
 
 class MyPageScreen extends StatelessWidget {
   const MyPageScreen({super.key});
 
-  // 이번 달 요약 (가정)
+  // 이번 달 요약 (임시 하드코딩)
   final int _income = 2000000;
   final int _expense = 1200000;
   final int _balance = 800000;
@@ -35,7 +36,7 @@ class MyPageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _secondaryColor, // ✨ 배경색 통일
+      backgroundColor: _secondaryColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text("마이페이지"),
@@ -46,17 +47,17 @@ class MyPageScreen extends StatelessWidget {
         ),
         backgroundColor: _secondaryColor,
         elevation: 0.0,
-        centerTitle: false, // ✨ 제목 왼쪽 정렬
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileArea(), // ✅ 프로필 영역
+            _buildProfileArea(),
             const SizedBox(height: 20),
 
-            _buildSummaryCard(), // ✅ 이번 달 요약 카드
+            _buildSummaryCard(),
             const SizedBox(height: 24),
 
             // ===== My 수입 · 월급 설정 =====
@@ -95,37 +96,35 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 1. 프로필 영역 (Profile Area)
+  // 1. 프로필 영역 + (추후 프로필 이미지 업로드용 InkWell)
   // ----------------------------------------------------
   Widget _buildProfileArea() {
     return Consumer<UserViewModel>(
       builder: (context, vm, child) {
+        final session = Supabase.instance.client.auth.currentSession;
+
+        // 이름 우선순위
+        String? name = vm.user?.name;
+        name ??= session?.user.userMetadata?['name'] as String?;
+        name ??= session?.user.email?.split('@').first;
+        name ??= 'User';
+
+        // 이메일 우선순위
+        String? email = vm.user?.email ?? session?.user.email ?? '';
+
+        final photoUrl = vm.user?.photoUrl;
+
         return InkWell(
           onTap: () async {
+            // 프로필 사진 바꾸기 (원하면 나중에 진짜 업로드 로직 연결)
             final picker = ImagePicker();
             final picked = await picker.pickImage(source: ImageSource.gallery);
+            if (picked == null) return;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: _primaryColor.withOpacity(0.1),
-            child: Icon(Icons.person_rounded, size: 40, color: _primaryColor),
-          ),
-          const SizedBox(width: 16),
-          Consumer<UserViewModel>(
-            builder: (context, vm, child) {
-              String? name = vm.user?.name;
-              name ??= session?.user.userMetadata?['name'] as String?;
-              name ??= session?.user.email?.split('@').first;
-              name ??= 'User';
-
-              String? email = vm.user?.email ?? session?.user.email ?? '';
-
-            // DB 업데이트 + ViewModel 업데이트
-            await vm.updateProfileImage(imageUrl);
+            // TODO: Supabase Storage에 업로드 후 URL 얻기
+            // 최종적으로는 아래처럼 쓰면 됨:
+            // final imageUrl = await uploadToSupabase(picked);
+            // await vm.updateProfileImage(imageUrl);
           },
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
@@ -134,15 +133,15 @@ class MyPageScreen extends StatelessWidget {
                 CircleAvatar(
                   radius: 36,
                   backgroundColor: _primaryColor.withOpacity(0.1),
-                  backgroundImage: vm.user?.photoUrl != null
-                      ? NetworkImage(vm.user!.photoUrl!)
+                  backgroundImage: photoUrl != null
+                      ? NetworkImage(photoUrl)
                       : null,
-                  child: vm.user?.photoUrl == null
-                      ? Icon(
-                    Icons.person_rounded,
-                    size: 40,
-                    color: _primaryColor,
-                  )
+                  child: photoUrl == null
+                      ? const Icon(
+                          Icons.person_rounded,
+                          size: 40,
+                          color: _primaryColor,
+                        )
                       : null,
                 ),
                 const SizedBox(width: 16),
@@ -150,7 +149,7 @@ class MyPageScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vm.user!.name,
+                      name,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -159,7 +158,7 @@ class MyPageScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      vm.user!.email,
+                      email,
                       style: const TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                   ],
@@ -174,9 +173,8 @@ class MyPageScreen extends StatelessWidget {
     );
   }
 
-
   // ----------------------------------------------------
-  // ✅ 2. 이번 달 요약 카드 (Summary Card)
+  // 2. 이번 달 요약 카드
   // ----------------------------------------------------
   Widget _buildSummaryCard() {
     return Card(
@@ -214,7 +212,6 @@ class MyPageScreen extends StatelessWidget {
 
   Widget _summaryItem(String label, int amount, Color color) {
     final formattedAmount = NumberFormat('#,###').format(amount);
-
     return Column(
       children: [
         Text(
@@ -239,7 +236,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 공통: 섹션 제목 / Divider
+  // 공통: 섹션 제목 / Divider / Tile
   // ----------------------------------------------------
   Widget _buildMenuSection(String title) {
     return Padding(
@@ -292,9 +289,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ My 수입 · 월급 설정 카드
-  //   - 주 수입원 · 월급 설정 (MyIncomeScreen)
-  //   - 내 모든 수입원 (IncomeListScreen)
+  // My 수입 · 월급 설정 카드
   // ----------------------------------------------------
   Widget _buildIncomeSettingCard(BuildContext context) {
     return Card(
@@ -335,10 +330,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 정보 변경 카드
-  //   - 비밀번호 재설정
-  //   - 프로필 수정
-  //   - 알림 설정 (기존 기능 유지)
+  // 정보 변경 카드
   // ----------------------------------------------------
   Widget _buildInfoChangeCard(BuildContext context) {
     return Card(
@@ -378,15 +370,13 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ My 게시판 활동 카드
+  // My 게시판 활동 카드
   // ----------------------------------------------------
   Widget _buildBoardActivityCard(BuildContext context) {
     final session = Supabase.instance.client.auth.currentSession;
-
     if (session == null) {
       return const Text("로그인이 필요합니다.");
     }
-
     final String userId = session.user.id;
 
     return Card(
@@ -433,11 +423,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ My 지출 카드
-  //   - 카테고리 관리
-  //   - 자산 계좌 관리
-  //   - 통계 보기
-  //   - 목표 금액 변경
+  // My 지출 카드
   // ----------------------------------------------------
   Widget _buildSpendingCard(BuildContext context) {
     return Card(
@@ -448,7 +434,7 @@ class MyPageScreen extends StatelessWidget {
       child: Column(
         children: [
           _buildMenuTile(context, Icons.category_rounded, "카테고리 관리", () {
-            // TODO: 카테고리 관리 화면
+            // TODO
           }),
           _buildMenuDivider(),
           _buildMenuTile(
@@ -456,16 +442,16 @@ class MyPageScreen extends StatelessWidget {
             Icons.account_balance_wallet_rounded,
             "자산 계좌 관리",
             () {
-              // TODO: 자산 계좌 관리 화면
+              // TODO
             },
           ),
           _buildMenuDivider(),
           _buildMenuTile(context, Icons.bar_chart_rounded, "통계 보기", () {
-            // TODO: 통계 화면
+            // TODO
           }),
           _buildMenuDivider(),
           _buildMenuTile(context, Icons.flag_rounded, "목표 금액 변경", () {
-            // TODO: 목표 금액 변경 화면
+            // TODO
           }),
         ],
       ),
@@ -473,7 +459,7 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // ✅ 로그아웃 버튼
+  // 로그아웃
   // ----------------------------------------------------
   Widget _buildLogoutTile(BuildContext context) {
     return Card(
