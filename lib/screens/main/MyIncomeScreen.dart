@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+
+import '../viewmodels/TransactionViewModel.dart';
+import '../viewmodels/UserViewModel.dart';
+import '../../domain/entities/transaction_entity.dart';
 
 const Color _primaryColor = Color(0xFF4CAF50);
 const Color _secondaryColor = Color(0xFFF0F4F8);
@@ -43,6 +49,10 @@ class _MyIncomeScreenState extends State<MyIncomeScreen> {
   int _salaryAmount10k = 0;
 
   bool _isLoading = false;
+
+  // 🔥 월급 / 추가 수입을 거래 내역에도 기록할지 여부
+  bool _addSalaryAsTransaction = false;
+  bool _addExtraIncomeAsTransaction = false;
 
   SupabaseClient get _client => Supabase.instance.client;
 
@@ -265,7 +275,7 @@ class _MyIncomeScreenState extends State<MyIncomeScreen> {
   }
 
   // ----------------------------------------------------
-  // 2) 추가 수입원 카드
+  // 2) 추가 수입원 카드 (+ 거래 생성 옵션)
   // ----------------------------------------------------
   Widget _buildExtraIncomeCard() {
     return Card(
@@ -379,6 +389,22 @@ class _MyIncomeScreenState extends State<MyIncomeScreen> {
               icon: const Icon(Icons.add),
               label: const Text("추가 수입원 추가"),
             ),
+
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _addExtraIncomeAsTransaction,
+              onChanged: (v) {
+                setState(() {
+                  _addExtraIncomeAsTransaction = v ?? false;
+                });
+              },
+              title: const Text(
+                "이번 달 추가 수입들도 거래 내역에\n[부수입]으로 기록할게요.",
+                style: TextStyle(fontSize: 12),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
           ],
         ),
       ),
@@ -434,7 +460,7 @@ class _MyIncomeScreenState extends State<MyIncomeScreen> {
   }
 
   // ----------------------------------------------------
-  // 4) 월급 금액 설정 카드
+  // 4) 월급 금액 설정 카드 + “월급 거래도 추가” 체크박스
   // ----------------------------------------------------
   Widget _buildSalaryAmountCard() {
     return Card(
@@ -481,10 +507,103 @@ class _MyIncomeScreenState extends State<MyIncomeScreen> {
                 const Text("만 원"),
               ],
             ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _addSalaryAsTransaction,
+              onChanged: (v) {
+                setState(() {
+                  _addSalaryAsTransaction = v ?? false;
+                });
+              },
+              title: const Text(
+                "이번 달 월급이 이미 들어왔다면,\n거래 내역에도 [월급] 수입으로 기록할게요.",
+                style: TextStyle(fontSize: 12),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
           ],
         ),
       ),
     );
+  }
+
+  // ----------------------------------------------------
+  // 🔥 월급 + 추가 수입을 거래 내역(TransactionEntity)으로 기록
+  // ----------------------------------------------------
+  Future<void> _insertIncomeTransactionsIfNeeded() async {
+    if (!_addSalaryAsTransaction && !_addExtraIncomeAsTransaction) return;
+
+    final userVm = Provider.of<UserViewModel>(context, listen: false);
+    final txVm = Provider.of<TransactionViewModel>(context, listen: false);
+
+    final accountNum = userVm.user?.account_number;
+    if (accountNum == null) return;
+
+    final now = DateTime.now();
+    bool anyFail = false;
+
+    // 1) 월급 → 카테고리 11: 월급
+    if (_addSalaryAsTransaction && _salaryAmount10k > 0) {
+      final amountWon = _salaryAmount10k * 100000;
+
+      final salaryTx = TransactionEntity(
+        id: 0,
+        accountNumber: accountNum,
+        categoryId: 11, // 월급
+        amount: amountWon, // 수입 → 양수
+        memo: "월급 입금",
+        createdAt: DateFormat('yyyy-MM-dd').format(now),
+        assetId: 2, // 계좌이체로 가정
+      );
+
+      final ok = await txVm.insertTranaction(salaryTx);
+      if (!ok) anyFail = true;
+    }
+
+    // 2) 추가 수입들 → 카테고리 12: 부수입
+    if (_addExtraIncomeAsTransaction) {
+      for (final item in _extraIncomes) {
+        final raw = item.amountController.text.trim();
+        final amount10k = int.tryParse(raw) ?? 0;
+        if (amount10k <= 0) continue;
+
+        final amountWon = amount10k * 100000;
+
+        DateTime date = now;
+        final payDay = item.payDay;
+        if (payDay != null) {
+          try {
+            date = DateTime(now.year, now.month, payDay);
+          } catch (_) {
+            date = now;
+          }
+        }
+
+        final memoText = item.nameController.text.trim().isEmpty
+            ? "추가 수입"
+            : item.nameController.text.trim();
+
+        final extraTx = TransactionEntity(
+          id: 0,
+          accountNumber: accountNum,
+          categoryId: 12, // 부수입
+          amount: amountWon,
+          memo: memoText,
+          createdAt: DateFormat('yyyy-MM-dd').format(date),
+          assetId: 2, // 기본 계좌이체로 처리 (필요하면 나중에 수정)
+        );
+
+        final ok = await txVm.insertTranaction(extraTx);
+        if (!ok) anyFail = true;
+      }
+    }
+
+    if (anyFail && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("일부 수입 거래 내역 추가에 실패했습니다.")));
+    }
   }
 
   // ----------------------------------------------------
@@ -541,6 +660,9 @@ class _MyIncomeScreenState extends State<MyIncomeScreen> {
       if (rows.isNotEmpty) {
         await _client.from('user_extra_income_table').insert(rows);
       }
+
+      // 3) ✅ 월급 / 추가 수입을 거래 내역으로도 기록
+      await _insertIncomeTransactionsIfNeeded();
 
       if (mounted) {
         ScaffoldMessenger.of(
