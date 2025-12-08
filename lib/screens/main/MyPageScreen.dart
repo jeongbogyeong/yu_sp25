@@ -13,6 +13,7 @@ import '../MyCommunity/MyCommentListScreen.dart';
 import '../MyCommunity/MyLikedPostListScreen.dart';
 import '../MyCommunity/MyPostListScreen.dart';
 import '../viewmodels/UserViewModel.dart';
+import '../viewmodels/TransactionViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
 import 'ExpensePlanScreen.dart';
@@ -20,6 +21,9 @@ import 'ExpensePlanScreen.dart';
 // 수입 설정 / 조회 화면
 import 'MyIncomeScreen.dart';
 import 'IncomeListScreen.dart';
+
+// 거래 엔티티
+import '../../domain/entities/transaction_entity.dart';
 
 // ✨ 테마 색상 정의
 const Color _primaryColor = Color(0xFF4CAF50);
@@ -29,75 +33,201 @@ const Color _expenseColor = Color(0xFFEF5350);
 class MyPageScreen extends StatelessWidget {
   const MyPageScreen({super.key});
 
-  // 이번 달 요약 (임시 하드코딩)
-  final int _income = 2000000;
-  final int _expense = 1200000;
-  final int _balance = 800000;
+  /// 🔥 DB에서
+  /// 1) 월급 + 추가 수입 (수입 설정 화면 기준)
+  /// 2) 모든 소비 계획의 고정 지출 합계
+  /// 를 한 번에 가져온다.
+  Future<Map<String, int>> _fetchIncomeAndFixedExpense() async {
+    final client = Supabase.instance.client;
+    final session = client.auth.currentSession;
+
+    if (session == null) {
+      return {'income': 0, 'fixedExpense': 0};
+    }
+
+    final uid = session.user.id;
+
+    int income10kTotal = 0; // 월급 + 추가 수입 (10만 원 단위 합)
+    int fixedExpenseTotal = 0; // 모든 계획의 고정 지출 합 (원 단위)
+
+    // ---------- 1) userInfo_table 에서 월급 ----------
+    final userInfo = await client
+        .from('userInfo_table')
+        .select('salaryAmount10k')
+        .eq('uid', uid)
+        .maybeSingle();
+
+    if (userInfo != null) {
+      final salary10k = (userInfo['salaryAmount10k'] as num?)?.toInt() ?? 0;
+      income10kTotal += salary10k;
+    }
+
+    // ---------- 2) user_extra_income_table 에서 추가 수입 ----------
+    final extraRows = await client
+        .from('user_extra_income_table')
+        .select('amount10k')
+        .eq('uid', uid);
+
+    if (extraRows is List) {
+      for (final row in extraRows) {
+        final amount10k = (row['amount10k'] as num?)?.toInt() ?? 0;
+        income10kTotal += amount10k;
+      }
+    }
+
+    // 10만 원 단위 → 원 단위
+    final incomeWon = income10kTotal * 100000;
+
+    // ---------- 3) expense_plan_table + expense_fixed_item_table ----------
+    final plans = await client
+        .from('expense_plan_table')
+        .select('id, rent, saving, loan')
+        .eq('uid', uid);
+
+    if (plans is List) {
+      for (final p in plans) {
+        final planId = p['id'];
+
+        final rent = (p['rent'] as num?)?.toInt() ?? 0;
+        final saving = (p['saving'] as num?)?.toInt() ?? 0;
+        final loan = (p['loan'] as num?)?.toInt() ?? 0;
+
+        fixedExpenseTotal += rent + saving + loan;
+
+        // 각 plan 의 기타 고정비
+        final fixedItems = await client
+            .from('expense_fixed_item_table')
+            .select('amount')
+            .eq('plan_id', planId);
+
+        if (fixedItems is List) {
+          for (final item in fixedItems) {
+            final amt = (item['amount'] as num?)?.toInt() ?? 0;
+            fixedExpenseTotal += amt;
+          }
+        }
+      }
+    }
+
+    return {'income': incomeWon, 'fixedExpense': fixedExpenseTotal};
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _secondaryColor,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text("마이페이지"),
-        titleTextStyle: const TextStyle(
-          color: Colors.black87,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-        backgroundColor: _secondaryColor,
-        elevation: 0.0,
-        centerTitle: false,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileArea(),
-            const SizedBox(height: 20),
+    return Consumer<TransactionViewModel>(
+      builder: (context, txViewModel, child) {
+        final List<TransactionEntity> transactions =
+            txViewModel.transactions ?? [];
 
-            _buildSummaryCard(),
-            const SizedBox(height: 24),
+        // 🔹 거래 내역 기반 수입/지출
+        //   - amount > 0  : 수입 카테고리로 들어온 돈
+        //   - amount < 0  : 지출
+        int incomeFromTx = 0;
+        int expenseFromTx = 0;
 
-            // ===== My 수입 · 월급 설정 =====
-            _buildMenuSection("My 수입 · 월급 설정"),
-            _buildMenuDivider(),
-            _buildIncomeSettingCard(context),
-            const SizedBox(height: 24),
+        for (final tx in transactions) {
+          final amount = tx.amount;
+          if (amount > 0) {
+            incomeFromTx += amount;
+          } else if (amount < 0) {
+            expenseFromTx += amount.abs();
+          }
+        }
 
-            // ===== 정보 변경 =====
-            _buildMenuSection("정보 변경"),
-            _buildMenuDivider(),
-            _buildInfoChangeCard(context),
-            const SizedBox(height: 24),
+        return FutureBuilder<Map<String, int>>(
+          future: _fetchIncomeAndFixedExpense(),
+          builder: (context, snapshot) {
+            final dbIncome = snapshot.data?['income'] ?? 0; // 월급 + 추가 수입
+            final fixedExpenseTotal =
+                snapshot.data?['fixedExpense'] ?? 0; // 모든 고정지출 합계
 
-            // ===== My 게시판 활동 =====
-            _buildMenuSection("My 게시판 활동"),
-            _buildMenuDivider(),
-            _buildBoardActivityCard(context),
-            const SizedBox(height: 24),
+            final isLoadingDb =
+                snapshot.connectionState == ConnectionState.waiting;
 
-            // ===== My 지출 =====
-            _buildMenuSection("My 지출"),
-            _buildMenuDivider(),
-            _buildSpendingCard(context),
-            const SizedBox(height: 24),
+            // 🔥 최종 수입 = (설정 기반 수입) + (거래 내역 수입 카테고리)
+            final int totalIncome = dbIncome + incomeFromTx;
 
-            // ===== 로그아웃 =====
-            _buildMenuSection("로그아웃"),
-            _buildMenuDivider(),
-            _buildLogoutTile(context),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
+            // 🔥 최종 지출 = (거래 지출) + (고정 지출)
+            final int totalExpense = expenseFromTx + fixedExpenseTotal;
+
+            final int balance = totalIncome - totalExpense;
+
+            return Scaffold(
+              backgroundColor: _secondaryColor,
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: const Text("마이페이지"),
+                titleTextStyle: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                backgroundColor: _secondaryColor,
+                elevation: 0.0,
+                centerTitle: false,
+              ),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProfileArea(),
+                    const SizedBox(height: 20),
+
+                    // 🔥 "수입 = 월급+추가수입+수입카테고리" / "지출 = 거래지출+고정지출"
+                    _buildSummaryCard(
+                      income: totalIncome,
+                      expense: totalExpense,
+                      balance: balance,
+                      fixedExpenseIncluded: fixedExpenseTotal,
+                      isLoadingFixed: isLoadingDb,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ===== My 수입 · 월급 설정 =====
+                    _buildMenuSection("My 수입 · 월급 설정"),
+                    _buildMenuDivider(),
+                    _buildIncomeSettingCard(context),
+                    const SizedBox(height: 24),
+
+                    // ===== 정보 변경 =====
+                    _buildMenuSection("정보 변경"),
+                    _buildMenuDivider(),
+                    _buildInfoChangeCard(context),
+                    const SizedBox(height: 24),
+
+                    // ===== My 게시판 활동 =====
+                    _buildMenuSection("My 게시판 활동"),
+                    _buildMenuDivider(),
+                    _buildBoardActivityCard(context),
+                    const SizedBox(height: 24),
+
+                    // ===== My 지출 =====
+                    _buildMenuSection("My 지출"),
+                    _buildMenuDivider(),
+                    _buildSpendingCard(context),
+                    const SizedBox(height: 24),
+
+                    // ===== 로그아웃 =====
+                    _buildMenuSection("로그아웃"),
+                    _buildMenuDivider(),
+                    _buildLogoutTile(context),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
   // ----------------------------------------------------
-  // 1. 프로필 영역 + (추후 프로필 이미지 업로드용 InkWell)
+  // 1. 프로필 영역
   // ----------------------------------------------------
   Widget _buildProfileArea() {
     return Consumer<UserViewModel>(
@@ -117,15 +247,11 @@ class MyPageScreen extends StatelessWidget {
 
         return InkWell(
           onTap: () async {
-            // 프로필 사진 바꾸기 (원하면 나중에 진짜 업로드 로직 연결)
+            // 프로필 사진 바꾸기 (나중에 Storage 연동 가능)
             final picker = ImagePicker();
             final picked = await picker.pickImage(source: ImageSource.gallery);
             if (picked == null) return;
-
-            // TODO: Supabase Storage에 업로드 후 URL 얻기
-            // 최종적으로는 아래처럼 쓰면 됨:
-            // final imageUrl = await uploadToSupabase(picked);
-            // await vm.updateProfileImage(imageUrl);
+            // TODO: Supabase Storage 업로드 후 URL 저장
           },
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
@@ -175,9 +301,15 @@ class MyPageScreen extends StatelessWidget {
   }
 
   // ----------------------------------------------------
-  // 2. 이번 달 요약 카드
+  // 2. 요약 카드
   // ----------------------------------------------------
-  Widget _buildSummaryCard() {
+  Widget _buildSummaryCard({
+    required int income,
+    required int expense,
+    required int balance,
+    required int fixedExpenseIncluded,
+    required bool isLoadingFixed,
+  }) {
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -189,22 +321,37 @@ class MyPageScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "이번 달 자산 현황",
+              "전체 자산 현황",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              isLoadingFixed
+                  ? "고정 지출 불러오는 중..."
+                  : "고정 지출(월세/적금/기타 포함)까지 반영된 지출입니다.",
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
             const Divider(height: 24, thickness: 0.5),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _summaryItem("수입", _income, _primaryColor),
-                _summaryItem("지출", _expense, _expenseColor),
-                _summaryItem("잔액", _balance, Colors.blueAccent),
+                _summaryItem("수입", income, _primaryColor),
+                _summaryItem("지출", expense, _expenseColor),
+                _summaryItem("잔액", balance, Colors.blueAccent),
               ],
             ),
+            const SizedBox(height: 12),
+            if (fixedExpenseIncluded > 0) ...[
+              const Divider(height: 20, thickness: 0.5),
+              Text(
+                "※ 이 중 고정 지출: ${NumberFormat('#,###').format(fixedExpenseIncluded)}원",
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
           ],
         ),
       ),
@@ -347,7 +494,6 @@ class MyPageScreen extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const PasswordResetScreen()),
             );
           }),
-
           _buildMenuDivider(),
           _buildMenuTile(
             context,
