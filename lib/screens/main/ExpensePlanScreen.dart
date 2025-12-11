@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../service/notification/notification_service.dart';
 import '../../service/notification/notification_definitions.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'MyIncomeScreen.dart';
 
@@ -219,11 +220,16 @@ class _ExpensePlanScreenState extends State<ExpensePlanScreen> {
         rent: rent,
         saving: saving,
         loan: loan,
-        etcList: [baseEtc, ...extraEtcList],
+        etcList: [baseEtc, ...extraEtcList], // 🔧 extratEtcList → extraEtcList
       );
 
-      // ✅ 여기서 하루 예산 계산해서 알림(type 3)에 반영
+      // ✅ 이번 달 소비 계획 완료 표시 (SharedPreferences)
       final now = DateTime.now();
+      final prefs = await SharedPreferences.getInstance();
+      final planKey = 'plan_done_${now.year}_${now.month}';
+      await prefs.setBool(planKey, true);
+
+      // ✅ 여기서 하루 예산 계산해서 알림(type 3)에 반영
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       final remainingDays = daysInMonth - now.day + 1; // 오늘 포함
       final double daily = remainingDays > 0
