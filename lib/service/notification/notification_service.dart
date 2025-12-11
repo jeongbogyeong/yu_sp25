@@ -74,6 +74,7 @@ class NotificationService {
   static void scheduleNotificationByType(
     NotificationDefinition def, {
     TransactionViewModel? txVm,
+    double? dailyBudget, // 🔥 하루 예산(있으면 type 3 알림에 사용)
   }) {
     final id = def.type;
     final title = "NudgeGap 알림: ${def.title}";
@@ -85,6 +86,11 @@ class NotificationService {
     if (def.type == 0 && txVm != null) {
       final total = txVm.getTodayTotalSpending();
       body = "오늘 총 지출 금액은 ${total.toStringAsFixed(0)}원이에요.";
+    }
+
+    // 🔥 type 3: 오늘의 예산 확인 → 하루 예산(dailyBudget) 값이 넘어오면 그걸로 body 생성
+    if (def.type == 3 && dailyBudget != null) {
+      body = "오늘 사용 가능한 예산은 ${dailyBudget.toStringAsFixed(0)}원이에요.";
     }
 
     switch (def.type) {

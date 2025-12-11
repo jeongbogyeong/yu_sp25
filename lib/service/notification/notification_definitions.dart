@@ -36,9 +36,10 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 3,
     title: "오늘의 예산 확인",
-    description: "하루 예산 대비 현재 지출 상황을 알림",
+    description: "", // 🔥 실제 문구는 NotificationService에서 하루 예산으로 채움
     frequency: "매일 아침 8시",
   ),
+
   NotificationDefinition(
     type: 4,
     title: "예상 세금 계산",

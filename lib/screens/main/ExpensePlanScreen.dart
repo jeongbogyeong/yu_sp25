@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../service/notification/notification_service.dart';
+import '../../service/notification/notification_definitions.dart';
 
 import 'MyIncomeScreen.dart';
 
@@ -191,20 +193,21 @@ class _ExpensePlanScreenState extends State<ExpensePlanScreen> {
       return;
     }
 
-    final rent = _parseController(_rentController);
-    final saving = _parseController(_savingController);
-    final loan = _parseController(_loanController);
+    final double rent = _parseController(_rentController);
+    final double saving = _parseController(_savingController);
+    final double loan = _parseController(_loanController);
 
     // ✅ 기타 고정비 = 기본 1개 + 추가로 만든 것들
-    final baseEtc = _parseController(_etcFixedController);
-    final extraEtcList = _extraFixedControllers
+    final double baseEtc = _parseController(_etcFixedController);
+    final List<double> extraEtcList = _extraFixedControllers
         .map((c) => _parseController(c))
         .toList();
-    final etcTotal =
+    final double etcTotal =
         baseEtc + extraEtcList.fold<double>(0, (sum, v) => sum + v);
 
-    final totalFixed = rent + saving + loan + etcTotal;
-    final living = _salaryAmountWon - totalFixed;
+    final double totalFixed = rent + saving + loan + etcTotal;
+    // int - double → double로 명시
+    final double living = _salaryAmountWon.toDouble() - totalFixed;
 
     setState(() {
       _livingBudget = living;
@@ -218,6 +221,23 @@ class _ExpensePlanScreenState extends State<ExpensePlanScreen> {
         loan: loan,
         etcList: [baseEtc, ...extraEtcList],
       );
+
+      // ✅ 여기서 하루 예산 계산해서 알림(type 3)에 반영
+      final now = DateTime.now();
+      final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+      final remainingDays = daysInMonth - now.day + 1; // 오늘 포함
+      final double daily = remainingDays > 0
+          ? living / remainingDays
+          : 0.0; // 오늘 쓸 수 있는 예산
+
+      // NotificationDefinition 중 type == 3(오늘의 예산 확인) 찾기
+      final def = notificationDefinitions.firstWhere(
+        (d) => d.type == 3,
+        orElse: () => notificationDefinitions[0],
+      );
+
+      // 🔔 하루 예산을 body에 반영해서 매일 8시에 울리도록 재등록
+      NotificationService.scheduleNotificationByType(def, dailyBudget: daily);
 
       if (mounted) {
         ScaffoldMessenger.of(
@@ -633,7 +653,9 @@ class _ExpensePlanScreenState extends State<ExpensePlanScreen> {
     final now = DateTime.now();
     final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
     final remainingDays = daysInMonth - now.day + 1; // 오늘 포함
-    final daily = remainingDays > 0 ? _livingBudget! / remainingDays : 0;
+    final double daily = remainingDays > 0
+        ? _livingBudget! / remainingDays
+        : 0.0;
 
     final isOver = _livingBudget! < 0;
 
