@@ -18,10 +18,9 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 0,
     title: "오늘의 지출 요약",
-    description: "", // 🔥 여기 빈칸 → 매일 알림 보낼 때 채움
+    description: "", // 🔥 body는 NotificationService에서 오늘 총 지출로 만들어줌
     frequency: "매일 저녁 10시",
   ),
-
   NotificationDefinition(
     type: 1,
     title: "주간 소비 패턴 분석",
@@ -51,5 +50,33 @@ const List<NotificationDefinition> notificationDefinitions = [
     title: "소비 기록이 지연되고 있어요",
     description: "소비 기록을 사용자가 2일 이상 입력하지 않았을 때 알림",
     frequency: "필요시",
+  ),
+
+  // -------------------------------
+  // 🌱 계절 알림 (항상 제공되는 시스템 알림)
+  // -------------------------------
+  NotificationDefinition(
+    type: 6,
+    title: "여름 생활비 걱정",
+    description: "여름 생활비 벌써 걱정되시나요? 커뮤니티에서 생활비 관련 꿀팁을 나눠보세요!",
+    frequency: "매년 6월 1일 오전 9시",
+  ),
+  NotificationDefinition(
+    type: 7,
+    title: "겨울 난방비 걱정",
+    description: "겨울 난방비 벌써 걱정되시나요? 커뮤니티에서 생활비 관련 꿀팁을 나눠보세요!",
+    frequency: "매년 12월 1일 오전 9시",
+  ),
+  NotificationDefinition(
+    type: 8,
+    title: "환절기 병원비 걱정 (봄)",
+    description: "일교차가 심한 환절기 병원비 벌써 걱정되시나요? 커뮤니티에서 꿀팁을 나눠보세요!",
+    frequency: "매년 3월 1일 오전 9시",
+  ),
+  NotificationDefinition(
+    type: 9,
+    title: "환절기 병원비 걱정 (가을)",
+    description: "일교차가 심한 환절기 병원비 벌써 걱정되시나요? 커뮤니티에서 꿀팁을 나눠보세요!",
+    frequency: "매년 9월 1일 오전 9시",
   ),
 ];

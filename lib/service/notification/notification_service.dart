@@ -63,7 +63,6 @@ class NotificationService {
     for (var def in notificationDefinitions) {
       final isEnabled = prefs.getBool('noti_${def.type}') ?? true;
       if (isEnabled) {
-        // 기본 등록 (description 고정으로 쓰는 것들)
         NotificationService.scheduleNotificationByType(def);
       }
     }
@@ -98,6 +97,7 @@ class NotificationService {
           time: const TimeOfDay(hour: 22, minute: 0),
         );
         break;
+
       case 1:
         // 매주 일요일 주간 요약
         scheduleWeeklyNotification(
@@ -107,6 +107,7 @@ class NotificationService {
           day: Day.sunday,
         );
         break;
+
       case 2:
       case 4:
         // 매월 1일 월간/예산 관련 알림
@@ -118,6 +119,7 @@ class NotificationService {
           time: const TimeOfDay(hour: 9, minute: 0),
         );
         break;
+
       case 3:
         // 매일 아침 8시 (예: 동기부여 메시지)
         scheduleDailyNotification(
@@ -127,9 +129,58 @@ class NotificationService {
           time: const TimeOfDay(hour: 8, minute: 0),
         );
         break;
+
       case 5:
         // 소비 기록 2일 지연 알림
         scheduleSpendingDelayNotification(id: id, title: title, body: body);
+        break;
+
+      // 🌱 6: 여름 생활비 (6월 1일 9시)
+      case 6:
+        scheduleYearlyNotification(
+          id: id,
+          title: title,
+          body: body,
+          month: 6,
+          day: 1,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        );
+        break;
+
+      // ❄️ 7: 겨울 난방비 (12월 1일 9시)
+      case 7:
+        scheduleYearlyNotification(
+          id: id,
+          title: title,
+          body: body,
+          month: 12,
+          day: 1,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        );
+        break;
+
+      // 🍃 8: 환절기 병원비 (3월 1일 9시)
+      case 8:
+        scheduleYearlyNotification(
+          id: id,
+          title: title,
+          body: body,
+          month: 3,
+          day: 1,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        );
+        break;
+
+      // 🍂 9: 환절기 병원비 (9월 1일 9시)
+      case 9:
+        scheduleYearlyNotification(
+          id: id,
+          title: title,
+          body: body,
+          month: 9,
+          day: 1,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        );
         break;
     }
   }
@@ -273,6 +324,61 @@ class NotificationService {
   }
 
   // ----------------------------------------------------
+  // ✅ 4-1. 알림 예약 (매년 특정 월/일, 특정 시간)
+  // ----------------------------------------------------
+  static Future scheduleYearlyNotification({
+    required int id,
+    required String title,
+    required String body,
+    required int month, // 3, 6, 9, 12 등
+    required int day, // 보통 1일
+    required TimeOfDay time,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      month,
+      day,
+      time.hour,
+      time.minute,
+    );
+
+    // 이미 지났으면 내년으로
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year + 1,
+        month,
+        day,
+        time.hour,
+        time.minute,
+      );
+    }
+
+    await _notifications.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'yearly_channel', // 채널 ID
+          '계절 알림', // 채널 이름
+          channelDescription: '계절 변화에 맞춰 보내는 알림',
+          importance: Importance.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      // 매년 같은 월/일/시간에 반복
+      matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      payload: id.toString(),
+    );
+  }
+
+  // ----------------------------------------------------
   // ✅ 5. 알림 취소 (id를 통해 취소)
   // ----------------------------------------------------
   static Future cancelNotification(int id) async {
@@ -285,10 +391,6 @@ class NotificationService {
   }
 
   /// ✅ 6. 소비 기록이 2일 이상 없을 때만 울리는 알림
-  ///
-  /// SharedPreferences에 저장된 마지막 소비 기록 날짜(`last_spending_input`)를 읽어서
-  /// - 이미 2일 이상 지났으면: 지금 기준으로 몇 초 뒤에 바로 울리도록 예약
-  /// - 아직 2일이 안 됐으면: 2일이 되는 시점의 아침 9시에 한 번 울리도록 예약
   static Future scheduleSpendingDelayNotification({
     required int id,
     required String title,
