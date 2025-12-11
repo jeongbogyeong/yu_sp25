@@ -1,3 +1,4 @@
+// lib/screens/viewmodels/TransactionViewModel.dart
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,7 +8,7 @@ import '../../domain/usecases/transaction_user.dart';
 class TransactionViewModel with ChangeNotifier {
   final TransactionUser transactionUser;
 
-  // ✅ 널 대신 "빈 리스트"로 시작하게
+  // ✅ 널 대신 "빈 리스트"로 시작
   List<TransactionEntity> _transactions = [];
   List<TransactionEntity> get transactions => _transactions;
 
@@ -26,8 +27,9 @@ class TransactionViewModel with ChangeNotifier {
 
     // 최신 날짜가 위로 오도록 정렬
     _transactions.sort((a, b) {
-      final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
-      final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
+      // createdAt 이 String 이라고 가정
+      final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(0);
+      final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(0);
       return dateB.compareTo(dateA); // 내림차순
     });
 
@@ -41,13 +43,13 @@ class TransactionViewModel with ChangeNotifier {
         .insertTransaction(transaction);
 
     if (insertedTx != null) {
-      // 리스트에 추가 (널 아님)
+      // 리스트에 추가
       _transactions.add(insertedTx);
 
       // 정렬
       _transactions.sort((a, b) {
-        final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
-        final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
+        final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(0);
+        final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(0);
         return dateB.compareTo(dateA);
       });
 
