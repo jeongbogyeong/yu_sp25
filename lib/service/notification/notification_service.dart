@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smartmoney/screens/viewmodels/TransactionViewModel.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
@@ -43,46 +44,62 @@ class NotificationService {
       },
     );
 
-    //4 android 알림 권한 요청
+    // 4. android 알림 권한 요청
     await _notifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.requestNotificationsPermission();
 
-    // 4. iOS/macOS 알림 권한 요청
+    // 5. iOS/macOS 알림 권한 요청
     _notifications
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
         >()
         ?.requestPermissions(alert: true, badge: true, sound: true);
 
-    //5.알림 스케쥴 등록
+    // 6. 알림 스케쥴 등록
     final prefs = await SharedPreferences.getInstance();
     for (var def in notificationDefinitions) {
       final isEnabled = prefs.getBool('noti_${def.type}') ?? true;
       if (isEnabled) {
-        // 기존 NotificationService의 스케줄 함수 재사용
+        // 기본 등록 (description 고정으로 쓰는 것들)
         NotificationService.scheduleNotificationByType(def);
       }
     }
   }
 
-  static void scheduleNotificationByType(NotificationDefinition def) {
+  // ----------------------------------------------------
+  // ✅ 알림 정의(type)에 따라 스케줄링
+  // ----------------------------------------------------
+  static void scheduleNotificationByType(
+    NotificationDefinition def, {
+    TransactionViewModel? txVm,
+  }) {
     final id = def.type;
-    final title = "SmartMoney 알림: ${def.title}";
-    final body = def.description;
+    final title = "NudgeGap 알림: ${def.title}";
+
+    // 기본 description
+    String body = def.description;
+
+    // 🔥 type 0: 오늘 지출 요약 → TransactionViewModel 있으면 실제 오늘 총 지출 금액으로 body 생성
+    if (def.type == 0 && txVm != null) {
+      final total = txVm.getTodayTotalSpending();
+      body = "오늘 총 지출 금액은 ${total.toStringAsFixed(0)}원이에요.";
+    }
 
     switch (def.type) {
       case 0:
+        // 매일 22:00에 오늘 지출 요약 알림
         scheduleDailyNotification(
           id: id,
           title: title,
           body: body,
-          time: const TimeOfDay(hour: 22, minute: 00),
+          time: const TimeOfDay(hour: 22, minute: 0),
         );
         break;
       case 1:
+        // 매주 일요일 주간 요약
         scheduleWeeklyNotification(
           id: id,
           title: title,
@@ -92,6 +109,7 @@ class NotificationService {
         break;
       case 2:
       case 4:
+        // 매월 1일 월간/예산 관련 알림
         scheduleMonthlyNotification(
           id: id,
           title: title,
@@ -101,6 +119,7 @@ class NotificationService {
         );
         break;
       case 3:
+        // 매일 아침 8시 (예: 동기부여 메시지)
         scheduleDailyNotification(
           id: id,
           title: title,
@@ -109,6 +128,7 @@ class NotificationService {
         );
         break;
       case 5:
+        // 소비 기록 2일 지연 알림
         scheduleSpendingDelayNotification(id: id, title: title, body: body);
         break;
     }
@@ -167,7 +187,6 @@ class NotificationService {
     required String body,
     required Day day, // 예: Day.sunday
   }) async {
-    // 다음 주 해당 요일의 0시 0분으로 예약
     tz.TZDateTime nextInstanceOfDay(Day day) {
       tz.TZDateTime scheduledDate = tz.TZDateTime.now(tz.local);
       while (scheduledDate.weekday != day.value) {
@@ -197,7 +216,9 @@ class NotificationService {
     );
   }
 
-  //✅ 4. 알림 예약 (매월 특정 날짜, 특정 시간)
+  // ----------------------------------------------------
+  // ✅ 4. 알림 예약 (매월 특정 날짜, 특정 시간)
+  // ----------------------------------------------------
   static Future scheduleMonthlyNotification({
     required int id,
     required String title,
@@ -207,24 +228,21 @@ class NotificationService {
   }) async {
     final now = tz.TZDateTime.now(tz.local);
 
-    // 첫 번째 예약 시간을 다음 달 1일 또는 이번 달 1일(이미 지나지 않았다면)로 설정합니다.
     tz.TZDateTime scheduledDate = tz.TZDateTime(
       tz.local,
       now.year,
       now.month,
-      dayOfMonth, // 1일
+      dayOfMonth,
       time.hour,
       time.minute,
     );
 
-    // 만약 현재 날짜/시간이 예약 시간과 같거나 이미 지났다면, 다음 달로 넘깁니다.
     if (scheduledDate.isBefore(now) ||
         (scheduledDate.month == now.month &&
             scheduledDate.day == now.day &&
             (scheduledDate.hour < now.hour ||
                 (scheduledDate.hour == now.hour &&
                     scheduledDate.minute <= now.minute)))) {
-      // 다음 달 1일로 설정
       scheduledDate = tz.TZDateTime(
         tz.local,
         now.year,
@@ -250,7 +268,6 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      // 매월 같은 날짜, 같은 시간에 반복하도록 설정합니다.
       payload: id.toString(),
     );
   }
@@ -304,7 +321,7 @@ class NotificationService {
         targetDate.year,
         targetDate.month,
         targetDate.day,
-        9, // 아침 9시 (원하면 시간 바꿔도 됨)
+        9, // 아침 9시
         0,
       );
     }
