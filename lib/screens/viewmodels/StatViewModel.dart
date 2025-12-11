@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartmoney/domain/usecases/stat_user.dart';
 import '../../domain/entities/spending_entitiy.dart';
+import '../../domain/entities/transaction_entity.dart';
 
 class StatViewModel with ChangeNotifier {
   final StatUser statUseCase;
@@ -20,12 +21,30 @@ class StatViewModel with ChangeNotifier {
 
   // ✅ 카테고리 Map을 11개 항목 (0~10)으로 초기화
   Map<int, double> categoryGoals = {
-    0: 0, 1: 0, 2: 0, 3: 0, 4: 0,
-    5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0
+    0: 0,
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+    8: 0,
+    9: 0,
+    10: 0,
   };
   Map<int, double> categoryExpenses = {
-    0: 0, 1: 0, 2: 0, 3: 0, 4: 0,
-    5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0
+    0: 0,
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+    8: 0,
+    9: 0,
+    10: 0,
   };
   double overallGoal = 0;
 
@@ -59,7 +78,7 @@ class StatViewModel with ChangeNotifier {
 
         for (var s in _spendingList!) {
           // 데이터가 있다면, 해당 type에 맞게 값 업데이트
-          if(categoryGoals.containsKey(s.type)) {
+          if (categoryGoals.containsKey(s.type)) {
             categoryGoals[s.type] = s.goal.toDouble();
             categoryExpenses[s.type] = s.spending.toDouble();
             calculatedOverallGoal += s.goal.toDouble();
@@ -68,7 +87,6 @@ class StatViewModel with ChangeNotifier {
         // DB에서 불러온 카테고리 목표의 합을 총 목표로 설정
         overallGoal = calculatedOverallGoal;
       }
-
     } catch (e) {
       _errorMessage = "데이터 불러오기 오류: $e";
     } finally {
@@ -77,11 +95,65 @@ class StatViewModel with ChangeNotifier {
     }
   }
 
+  /// 이번 주(월~일) 소비 금액을 요일별로 합산해서 리턴
+  /// - 인덱스 0 ~ 6  = [월, 화, 수, 목, 금, 토, 일]
+  /// - amount < 0 인 지출만 절대값으로 합산
+  List<double> getWeeklySpendingByDay(List<TransactionEntity>? transactions) {
+    // 월~일 7칸 초기화
+    final result = List<double>.filled(7, 0.0);
+
+    if (transactions == null || transactions.isEmpty) {
+      return result;
+    }
+
+    // 오늘 날짜(시간 00:00으로 맞추기)
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // 이번 주 월요일 00:00 구하기 (월=1, 일=7)
+    // ex) 월요일이면 0일 빼고, 화요일이면 1일 빼고 …
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final weekEnd = weekStart.add(
+      const Duration(days: 7),
+    ); // [weekStart, weekEnd) 구간
+
+    for (final tx in transactions) {
+      // ▶ 수입은 제외하고, 지출만 집계
+      if (tx.amount >= 0) continue;
+
+      DateTime? date;
+      try {
+        // createdAt 이 'yyyy-MM-dd' 라고 가정
+        date = DateTime.parse(tx.createdAt);
+      } catch (_) {
+        continue; // 파싱 실패하면 스킵
+      }
+
+      final dayOnly = DateTime(date.year, date.month, date.day);
+
+      // 이번 주 범위 밖이면 스킵
+      if (dayOnly.isBefore(weekStart) || !dayOnly.isBefore(weekEnd)) {
+        continue;
+      }
+
+      // 이번 주에서 몇 번째 요일인지(0~6) 계산
+      final diff = dayOnly.difference(weekStart).inDays;
+      if (diff < 0 || diff > 6) continue;
+
+      // 지출은 amount 가 음수라서 abs() 해서 누적
+      result[diff] += tx.amount.abs().toDouble();
+    }
+
+    return result;
+  }
+
   // ==================================================
   // ✅ updateGoals (목표 설정 화면에서 모든 값을 일괄 업데이트)
   // ==================================================
-  Future<bool> updateGoals(double newOverallGoal, Map<int, double> newCategoryGoals) async {
-
+  Future<bool> updateGoals(
+    double newOverallGoal,
+    Map<int, double> newCategoryGoals,
+  ) async {
     overallGoal = newOverallGoal.clamp(0, double.infinity);
 
     // 카테고리 목표를 신규 값으로 업데이트
@@ -117,7 +189,10 @@ class StatViewModel with ChangeNotifier {
         .fold(0.0, (sum, e) => sum + e.value);
 
     // 전체 목표에서 나머지 목표 합계를 뺀 값을 '기타' 목표로 설정
-    double etcGoalCalculated = (overallGoal - sumExceptEtc).clamp(0.0, double.infinity);
+    double etcGoalCalculated = (overallGoal - sumExceptEtc).clamp(
+      0.0,
+      double.infinity,
+    );
 
     // '기타' 카테고리 목표 업데이트
     categoryGoals[etcKey] = etcGoalCalculated;
@@ -152,13 +227,13 @@ class StatViewModel with ChangeNotifier {
   SpendingEntity _getOrCreateEntity(int type) {
     return _spendingList?.firstWhere(
           (s) => s.type == type,
-      orElse: () => SpendingEntity(
-        uid: statUseCase.currentUserId,
-        goal: 0,
-        spending: 0,
-        type: type,
-      ),
-    ) ??
+          orElse: () => SpendingEntity(
+            uid: statUseCase.currentUserId,
+            goal: 0,
+            spending: 0,
+            type: type,
+          ),
+        ) ??
         SpendingEntity(
           uid: statUseCase.currentUserId,
           goal: 0,
@@ -166,14 +241,14 @@ class StatViewModel with ChangeNotifier {
           type: type,
         );
   }
+
   // ==================================================
-// ✅ 특정 카테고리의 지출(spending) 값을 업데이트하는 함수
-// ==================================================
+  // ✅ 특정 카테고리의 지출(spending) 값을 업데이트하는 함수
+  // ==================================================
   Future<bool> updateSpend(int type, double newSpending) async {
     try {
       // 🔥 로컬 값 누적 갱신
-      categoryExpenses[type] =
-          (categoryExpenses[type] ?? 0) + newSpending;
+      categoryExpenses[type] = (categoryExpenses[type] ?? 0) + newSpending;
 
       // 기존 엔티티 가져오기
       final entity = _getOrCreateEntity(type);
@@ -200,14 +275,10 @@ class StatViewModel with ChangeNotifier {
 
       notifyListeners();
       return true;
-
     } catch (e) {
       _errorMessage = "지출 업데이트 중 오류: $e";
       notifyListeners();
       return false;
     }
   }
-
-
-
 }

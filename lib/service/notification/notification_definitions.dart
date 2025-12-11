@@ -28,7 +28,7 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 1,
     title: "주간 소비 패턴 분석",
-    description: "최근 일주일간의 소비 패턴을 분석해 리포트 형식으로 알림",
+    description: "Nudge Gap이 분석한 주간 소비 패턴을 알려드려요, 통계를 확인해보세요!",
     frequency: "일요일마다",
   ),
   NotificationDefinition(
