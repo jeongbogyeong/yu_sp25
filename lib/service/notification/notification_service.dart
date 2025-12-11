@@ -188,6 +188,17 @@ class NotificationService {
           time: const TimeOfDay(hour: 9, minute: 0),
         );
         break;
+      // 🌨 연말정산 시즌 알림 (매년 1월 5일)
+      case 10:
+        scheduleYearlyNotification(
+          id: id,
+          title: title,
+          body: body,
+          month: 1,
+          day: 5,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        );
+        break;
     }
   }
 

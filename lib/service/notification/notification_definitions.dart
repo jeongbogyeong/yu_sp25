@@ -80,4 +80,10 @@ const List<NotificationDefinition> notificationDefinitions = [
     description: "일교차가 심한 환절기 병원비 벌써 걱정되시나요? 커뮤니티에서 꿀팁을 나눠보세요!",
     frequency: "매년 9월 1일 오전 9시",
   ),
+  NotificationDefinition(
+    type: 10,
+    title: "연말정산 준비 알림",
+    description: "연말 정산, 걱정이 많으신가요? 커뮤니티에서 관련 꿀팁을 나눠보세요!",
+    frequency: "매년 1월 5일",
+  ),
 ];
