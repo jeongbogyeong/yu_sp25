@@ -51,8 +51,9 @@ class _NotificationSettingsScreenState
   }
 
   // 🌱 계절 알림(type 6~9)인지 확인
+  // 🌱 계절/시즌 알림(type 6~10)인지 확인
   bool _isSeasonal(NotificationItem item) {
-    return item.type >= 6 && item.type <= 9;
+    return item.type >= 6 && item.type <= 10;
   }
 
   // ----------------------------------------------------
@@ -64,10 +65,9 @@ class _NotificationSettingsScreenState
     List<NotificationItem> loadedItems = [];
     for (var def in notificationDefinitions) {
       final key = 'noti_${def.type}';
-
       bool isEnabled;
-      if (def.type >= 6 && def.type <= 9) {
-        // 🌱 계절 알림은 항상 ON, 사용자 설정 무시
+      if (def.type >= 6 && def.type <= 10) {
+        // 🌱 계절/시즌 알림은 항상 ON, 사용자 설정 무시
         isEnabled = true;
       } else {
         // 저장된 값이 없으면 기본값(true) 사용

@@ -36,9 +36,10 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 3,
     title: "오늘의 예산 확인",
-    description: "하루 예산 대비 현재 지출 상황을 알림",
+    description: "", // 🔥 실제 문구는 NotificationService에서 하루 예산으로 채움
     frequency: "매일 아침 8시",
   ),
+
   NotificationDefinition(
     type: 4,
     title: "예상 세금 계산",
@@ -78,5 +79,11 @@ const List<NotificationDefinition> notificationDefinitions = [
     title: "환절기 병원비 걱정 (가을)",
     description: "일교차가 심한 환절기 병원비 벌써 걱정되시나요? 커뮤니티에서 꿀팁을 나눠보세요!",
     frequency: "매년 9월 1일 오전 9시",
+  ),
+  NotificationDefinition(
+    type: 10,
+    title: "연말정산 준비 알림",
+    description: "연말 정산, 걱정이 많으신가요? 커뮤니티에서 관련 꿀팁을 나눠보세요!",
+    frequency: "매년 1월 5일",
   ),
 ];
