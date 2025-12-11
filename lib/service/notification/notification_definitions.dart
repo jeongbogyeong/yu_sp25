@@ -88,8 +88,15 @@ const List<NotificationDefinition> notificationDefinitions = [
   ),
   NotificationDefinition(
     type: 11,
-    title: "소득 계획 작성",
+    title: "소득 계획 작성 //사실은 유령 버튼(발표용으로 생성)",
     description: "소비계획이 아직 없네요! Nudge Gap에서 소득 계획을 작성해보세요.",
+    frequency: "필요시",
+  ),
+
+  NotificationDefinition(
+    type: 12,
+    title: "월급 기록 //사실은 유령 버튼(발표용으로 생성)",
+    description: "월급이 아직 없네요! Nudge Gap에서 월급을 작성해보세요.",
     frequency: "필요시",
   ),
 ];
