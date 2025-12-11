@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smartmoney/screens/main/MyIncomeScreen.dart';
+import '../../service/notification/notification_service.dart';
 
 const Color _primaryColor = Color(0xFF4CAF50);
 const Color _secondaryColor = Color(0xFFF0F4F8);
@@ -100,6 +101,15 @@ class _IncomeListScreenState extends State<IncomeListScreen> {
             ),
           );
         }
+      }
+      // 🔔 월급 기반 알림 스케줄링 (급여 기록 + 소비 계획 알림)
+      if (_salaryDay != null && _salaryAmount10k > 0) {
+        await NotificationService.scheduleSalaryIncomeReminder(
+          salaryDay: _salaryDay!,
+        );
+        await NotificationService.schedulePlanNotDoneReminder(
+          salaryDay: _salaryDay!,
+        );
       }
     } catch (e) {
       if (mounted) {

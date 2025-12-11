@@ -86,4 +86,10 @@ const List<NotificationDefinition> notificationDefinitions = [
     description: "연말 정산, 걱정이 많으신가요? 커뮤니티에서 관련 꿀팁을 나눠보세요!",
     frequency: "매년 1월 5일",
   ),
+  NotificationDefinition(
+    type: 11,
+    title: "소득 계획 작성",
+    description: "소비계획이 아직 없네요! Nudge Gap에서 소득 계획을 작성해보세요.",
+    frequency: "필요시",
+  ),
 ];

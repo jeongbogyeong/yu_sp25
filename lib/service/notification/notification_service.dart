@@ -11,6 +11,8 @@ import 'notification_definitions.dart';
 // 알림 기능을 캡슐화한 서비스 클래스
 class NotificationService {
   static final _notifications = FlutterLocalNotificationsPlugin();
+  static const int salaryIncomeReminderId = 100;
+  static const int planNotDoneReminderId = 101;
 
   // ----------------------------------------------------
   // ✅ 1. 초기화 (앱 시작 시 단 한 번 호출)
@@ -188,7 +190,8 @@ class NotificationService {
           time: const TimeOfDay(hour: 9, minute: 0),
         );
         break;
-      // 🌨 연말정산 시즌 알림 (매년 1월 5일)
+
+      // 🌨 10: 연말정산 시즌 알림 (매년 1월 5일)
       case 10:
         scheduleYearlyNotification(
           id: id,
@@ -285,7 +288,7 @@ class NotificationService {
   }
 
   // ----------------------------------------------------
-  // ✅ 4. 알림 예약 (매월 특정 날짜, 특정 시간)
+  // ✅ 4. 알림 예약 (매월 특정 날짜, 특정 시간) - 1회성
   // ----------------------------------------------------
   static Future scheduleMonthlyNotification({
     required int id,
@@ -461,6 +464,127 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: id.toString(),
+    );
+  }
+
+  /// ✅ 월급날 : "오늘 받은 월급, 급여 소득으로 기록하기" 알림
+  static Future<void> scheduleSalaryIncomeReminder({
+    required int salaryDay,
+  }) async {
+    // 혹시 이전에 잡혀 있던 같은 알림 있으면 지우고
+    await cancelNotification(salaryIncomeReminderId);
+
+    final now = tz.TZDateTime.now(tz.local);
+    final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+
+    // 1~31 범위, 그달 최대 일수 안에서만 사용
+    int safeDay = salaryDay;
+    if (safeDay < 1) safeDay = 1;
+    if (safeDay > daysInMonth) safeDay = daysInMonth;
+
+    await scheduleMonthlyNotification(
+      id: salaryIncomeReminderId,
+      title: 'NudgeGap 알림: 월급이 들어왔어요',
+      body: '오늘 받은 월급을 급여 소득으로 기록해 볼까요?',
+      dayOfMonth: safeDay,
+      time: const TimeOfDay(hour: 9, minute: 0), // 아침 9시
+    );
+  }
+
+  /// ✅ 월급 이후 : 이번 달 소비 계획을 아직 안 세웠다면 한 번 울리는 알림
+  static Future<void> schedulePlanNotDoneReminder({
+    required int salaryDay,
+  }) async {
+    // 이전에 잡힌 알림 있으면 먼저 취소
+    await cancelNotification(planNotDoneReminderId);
+
+    final now = tz.TZDateTime.now(tz.local);
+    int year = now.year;
+    int month = now.month;
+
+    int daysInMonth = DateUtils.getDaysInMonth(year, month);
+
+    // 이번 달 기준으로 안전한 월급 날짜 계산
+    int safeSalaryDay = salaryDay;
+    if (safeSalaryDay < 1) safeSalaryDay = 1;
+    if (safeSalaryDay > daysInMonth) safeSalaryDay = daysInMonth;
+
+    // 기본은 "월급 다음날 오전 9시"
+    int targetDay = safeSalaryDay + 1;
+    if (targetDay > daysInMonth) {
+      // 월말(30/31) + 1이면 다음 달 1일로 보냄
+      month += 1;
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
+      daysInMonth = DateUtils.getDaysInMonth(year, month);
+      targetDay = 1;
+    }
+
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      year,
+      month,
+      targetDay,
+      9,
+      0,
+    );
+
+    // 혹시 계산된 시간이 이미 지났으면, "다음 달 월급 다음날"로 다시 계산
+    if (scheduledDate.isBefore(now)) {
+      month = now.month + 1;
+      year = now.year;
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
+      daysInMonth = DateUtils.getDaysInMonth(year, month);
+
+      safeSalaryDay = salaryDay;
+      if (safeSalaryDay < 1) safeSalaryDay = 1;
+      if (safeSalaryDay > daysInMonth) safeSalaryDay = daysInMonth;
+
+      targetDay = safeSalaryDay + 1;
+      if (targetDay > daysInMonth) {
+        targetDay = 1;
+        month += 1;
+        if (month > 12) {
+          month = 1;
+          year += 1;
+        }
+      }
+
+      scheduledDate = tz.TZDateTime(tz.local, year, month, targetDay, 9, 0);
+    }
+
+    // 이 알림이 담당하는 (연,월)에 대해 소비 계획이 이미 세워졌으면 스킵
+    final prefs = await SharedPreferences.getInstance();
+    final planKey = 'plan_done_${scheduledDate.year}_${scheduledDate.month}';
+    final isPlanDone = prefs.getBool(planKey) ?? false;
+    if (isPlanDone) {
+      debugPrint(
+        '[NotificationService] plan already done for $planKey, skip reminder',
+      );
+      return;
+    }
+
+    await _notifications.zonedSchedule(
+      planNotDoneReminderId,
+      'NudgeGap 알림: 이번 달 소비 계획 세우기',
+      '이번 달 생활비 계획을 아직 세우지 않았어요. 고정비를 입력하고 하루 예산을 확인해 볼까요?',
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'plan_not_done_channel', // 채널 ID
+          '소비 계획 리마인더', // 채널 이름
+          channelDescription: '월급 이후 소비 계획이 작성되지 않았을 때 알려주는 알림',
+          importance: Importance.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: planNotDoneReminderId.toString(),
     );
   }
 }
