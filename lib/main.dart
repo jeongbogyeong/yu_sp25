@@ -31,24 +31,43 @@ final locator = GetIt.instance;
 // 🔥 navigatorKey: SMS 콜백에서 BuildContext 대신 쓰려고 전역으로 둠
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// 🔥 (옵션) 백그라운드에서 SMS 받을 때 로그 찍을 핸들러
+@pragma('vm:entry-point')
+Future<void> backgroundMessageHandler(SmsMessage message) async {
+  final body = message.body ?? '';
+  final addr = message.address ?? 'unknown';
+  debugPrint('✅ [BG] SMS 수신 - from:$addr / body:$body');
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('🔵 [main] 시작');
 
   // Supabase 초기화 (네가 쓰던 거 그대로)
   String supabaseUrl = 'https://hlaszktpxqzzknxjyabb.supabase.co';
   String supabaseKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsYXN6a3RweHF6emtueGp5YWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1ODkyMjQsImV4cCI6MjA3NjE2NTIyNH0.0x7SwkmdAypsSTtakOId9h7HDknoDiPmEYa2iYC7mZY';
 
+  debugPrint('🔵 [main] Supabase.initialize 호출');
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+  debugPrint('✅ [main] Supabase 초기화 완료');
 
   // DI 초기화
+  debugPrint('🔵 [main] setupLocator 호출');
   setupLocator();
+  debugPrint('✅ [main] DI(locator) 초기화 완료');
 
   // 알림 초기화
+  debugPrint('🔵 [main] NotificationService.init 호출');
   await NotificationService.init();
+  debugPrint('✅ [main] NotificationService.init 완료');
 
   // 한국어 날짜 포맷
+  debugPrint('🔵 [main] initializeDateFormatting 호출');
   await initializeDateFormatting('ko_KR');
+  debugPrint('✅ [main] initializeDateFormatting 완료');
+
+  debugPrint('🔵 [main] runApp 직전');
 
   runApp(
     MultiProvider(
@@ -81,47 +100,74 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    debugPrint('✅ MyApp.initState 호출됨 - SMS 리스너 초기화 시작');
+    debugPrint('✅ [MyApp.initState] 호출됨 - SMS 리스너 초기화 시작');
     _initSmsListener();
   }
 
   Future<void> _initSmsListener() async {
-    // 1) 권한 요청
-    final bool? granted = await _telephony.requestPhoneAndSmsPermissions;
-    debugPrint('✅ SMS 권한 요청 결과: $granted');
+    debugPrint('🔵 [_initSmsListener] 시작');
 
-    if (!(granted ?? false)) {
-      debugPrint('❌ SMS 권한 거부됨 - listenIncomingSms 시작 안 함');
-      return;
-    }
+    try {
+      // 1) 권한 요청
+      final bool? granted = await _telephony.requestPhoneAndSmsPermissions;
+      debugPrint('✅ [_initSmsListener] SMS 권한 요청 결과: $granted');
 
-    // 2) 문자 수신 리스너 등록
-    _telephony.listenIncomingSms(
-      onNewMessage: (SmsMessage message) async {
-        final body = message.body ?? "";
-        if (body.isEmpty) return;
+      if (!(granted ?? false)) {
+        debugPrint(
+          '❌ [_initSmsListener] SMS 권한 거부됨 - listenIncomingSms 등록 안 함',
+        );
+        return;
+      }
 
-        debugPrint('📩 SMS 수신: $body');
+      // 2) 문자 수신 리스너 등록
+      debugPrint('🔵 [_initSmsListener] listenIncomingSms 등록 시도');
+      _telephony.listenIncomingSms(
+        onNewMessage: (SmsMessage message) async {
+          final body = message.body ?? "";
+          final addr = message.address ?? 'unknown';
+          final date = message.date;
 
-        // navigatorKey로 최상위 context 얻어서 트랜잭션 생성
-        final ctx = navigatorKey.currentContext;
-        if (ctx == null) {
           debugPrint(
-            '⚠️ navigatorKey.currentContext 가 null이라 Transaction 생성 못 함',
+            '📩 [FG onNewMessage] SMS 수신 - from:$addr / date:$date / body:$body',
           );
-          return;
-        }
 
-        await createTransactionFromSms(body, ctx);
-      },
-      listenInBackground: false,
-    );
+          if (body.isEmpty) {
+            debugPrint('⚠️ [FG onNewMessage] body가 비어 있어서 무시');
+            return;
+          }
 
-    debugPrint('✅ listenIncomingSms 등록 완료');
+          // navigatorKey로 최상위 context 얻어서 트랜잭션 생성
+          final ctx = navigatorKey.currentContext;
+          if (ctx == null) {
+            debugPrint(
+              '⚠️ [FG onNewMessage] navigatorKey.currentContext == null -> createTransactionFromSms 호출 못함',
+            );
+            return;
+          }
+
+          debugPrint('🔵 [FG onNewMessage] createTransactionFromSms 호출 시작');
+          try {
+            await createTransactionFromSms(body, ctx);
+            debugPrint('✅ [FG onNewMessage] createTransactionFromSms 정상 완료');
+          } catch (e, st) {
+            debugPrint('❌ [FG onNewMessage] createTransactionFromSms 중 에러: $e');
+            debugPrint(st.toString());
+          }
+        },
+        onBackgroundMessage: backgroundMessageHandler, // 🔥 BG 로그도 찍자
+        listenInBackground: true, // 백그라운드도 수신 시도
+      );
+
+      debugPrint('✅ [_initSmsListener] listenIncomingSms 등록 완료');
+    } catch (e, st) {
+      debugPrint('❌ [_initSmsListener] 에러 발생: $e');
+      debugPrint(st.toString());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🎨 [MyApp.build] MaterialApp 빌드');
     return MaterialApp(
       title: 'NUDGE GAP',
       debugShowCheckedModeBanner: false,
