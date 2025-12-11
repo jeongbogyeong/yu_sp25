@@ -18,9 +18,10 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 0,
     title: "오늘의 지출 요약",
-    description: "당일 사용자가 지출한 총 금액을 요약하여 알림",
+    description: "", // 🔥 여기 빈칸 → 매일 알림 보낼 때 채움
     frequency: "매일 저녁 10시",
   ),
+
   NotificationDefinition(
     type: 1,
     title: "주간 소비 패턴 분석",

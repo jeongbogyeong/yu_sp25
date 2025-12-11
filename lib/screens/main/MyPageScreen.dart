@@ -17,7 +17,8 @@ import '../viewmodels/TransactionViewModel.dart';
 import '../widgets/NotificationSettingsScreen.dart';
 import '../login/PasswordReset.dart';
 import 'ExpensePlanScreen.dart';
-
+import '../../screens/widgets/GoalSettingScreen.dart';
+import 'StatsScreen.dart';
 // 수입 설정 / 조회 화면
 import 'MyIncomeScreen.dart';
 import 'IncomeListScreen.dart';
@@ -592,11 +593,21 @@ class MyPageScreen extends StatelessWidget {
           ),
           _buildMenuDivider(),
           _buildMenuTile(context, Icons.bar_chart_rounded, "통계 보기", () {
-            // TODO
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const StatsScreen(), // TODO: 통계 화면으로 변경
+              ),
+            );
           }),
           _buildMenuDivider(),
           _buildMenuTile(context, Icons.flag_rounded, "목표 금액 변경", () {
-            // TODO
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const GoalSettingScreen(),
+              ),
+            );
           }),
         ],
       ),
