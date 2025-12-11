@@ -5,11 +5,15 @@ class NotificationDefinition {
   final String description;
   final String frequency;
 
+  /// 🔒 유저가 on/off 스위치를 조작할 수 있는지 여부
+  final bool canToggle;
+
   const NotificationDefinition({
     required this.type,
     required this.title,
     required this.description,
     required this.frequency,
+    this.canToggle = true, // 기본값 = 토글 가능
   });
 }
 
@@ -18,7 +22,7 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 0,
     title: "오늘의 지출 요약",
-    description: "", // 🔥 body는 NotificationService에서 오늘 총 지출로 만들어줌
+    description: "",
     frequency: "매일 저녁 10시",
   ),
   NotificationDefinition(
@@ -36,7 +40,7 @@ const List<NotificationDefinition> notificationDefinitions = [
   NotificationDefinition(
     type: 3,
     title: "오늘의 예산 확인",
-    description: "", // 🔥 실제 문구는 NotificationService에서 하루 예산으로 채움
+    description: "",
     frequency: "매일 아침 8시",
   ),
 
@@ -54,7 +58,7 @@ const List<NotificationDefinition> notificationDefinitions = [
   ),
 
   // -------------------------------
-  // 🌱 계절 알림 (항상 제공되는 시스템 알림)
+  // 🌱 계절 알림
   // -------------------------------
   NotificationDefinition(
     type: 6,
@@ -80,23 +84,40 @@ const List<NotificationDefinition> notificationDefinitions = [
     description: "일교차가 심한 환절기 병원비 벌써 걱정되시나요? 커뮤니티에서 꿀팁을 나눠보세요!",
     frequency: "매년 9월 1일 오전 9시",
   ),
+
+  // -------------------------------
+  // 🔒 발표용 / 유령 버튼 (토글 불가)
+  // -------------------------------
   NotificationDefinition(
     type: 10,
     title: "연말정산 준비 알림",
     description: "연말 정산, 걱정이 많으신가요? 커뮤니티에서 관련 꿀팁을 나눠보세요!",
     frequency: "매년 1월 5일",
+    canToggle: false, // 🔒 스위치 비활성화
   ),
   NotificationDefinition(
     type: 11,
-    title: "소득 계획 작성 //사실은 유령 버튼(발표용으로 생성)",
+    title: "소득 계획 작성",
     description: "소비계획이 아직 없네요! Nudge Gap에서 소득 계획을 작성해보세요.",
     frequency: "필요시",
+    canToggle: false, // 🔒 스위치 비활성화
   ),
-
   NotificationDefinition(
     type: 12,
-    title: "월급 기록 //사실은 유령 버튼(발표용으로 생성)",
+    title: "월급 기록",
     description: "월급이 아직 없네요! Nudge Gap에서 월급을 작성해보세요.",
     frequency: "필요시",
+    canToggle: false, // 🔒 스위치 비활성화
+  ),
+
+  // -------------------------------
+  // 🔔 SMS 자동 거래 생성 알림 (실시간) — 토글 불가
+  // -------------------------------
+  NotificationDefinition(
+    type: 13,
+    title: "실시간 결제 알림 (SMS)",
+    description: "문자를 기반으로 자동 생성된 거래를 알려드려요.",
+    frequency: "실시간",
+    canToggle: false, // 🔒 스위치 비활성화
   ),
 ];

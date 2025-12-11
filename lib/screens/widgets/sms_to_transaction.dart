@@ -6,6 +6,7 @@ import '../../domain/entities/transaction_entity.dart';
 import '../viewmodels/TransactionViewModel.dart';
 import '../viewmodels/UserViewModel.dart';
 import '../../utils/sms_parser.dart';
+import 'package:smartmoney/service/notification/notification_service.dart';
 
 /// 📩 문자 1건을 파싱해서 Transaction 으로 바로 저장하는 함수
 Future<void> createTransactionFromSms(
@@ -47,4 +48,13 @@ Future<void> createTransactionFromSms(
   final vm = Provider.of<TransactionViewModel>(context, listen: false);
   final ok = await vm.insertTranaction(tx);
   debugPrint('✅ insertTransaction 결과: $ok');
+
+  // 🔔 거래 생성에 성공했으면, 실시간 알림 발사
+  if (ok) {
+    await NotificationService.showInstantTransactionNotification(
+      isIncome: isIncome,
+      amount: parsed.amount, // 양수 금액 그대로
+      memo: parsed.name,
+    );
+  }
 }

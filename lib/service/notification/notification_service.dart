@@ -587,4 +587,37 @@ class NotificationService {
       payload: planNotDoneReminderId.toString(),
     );
   }
+
+  /// ✅ SMS로 자동 생성된 거래에 대한 즉시 알림
+  static Future<void> showInstantTransactionNotification({
+    required bool isIncome,
+    required int amount,
+    required String memo,
+  }) async {
+    final title = isIncome ? '입금이 들어왔어요 💰' : '결제하셨네요? 💸';
+
+    final body = isIncome
+        ? '[$memo]에서 ${amount.toString()}원이 입금되었어요. 카테고리를 확인해 볼까요?'
+        : '[$memo]에서 ${amount.toString()}원을 사용했어요. 카테고리를 설정해 주세요.';
+
+    // 알림 id는 대충 시간 기준으로 유니크하게
+    final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    await _notifications.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'instant_tx_channel', // 채널 ID
+          '실시간 거래 알림', // 채널 이름
+          channelDescription: '문자 인식으로 자동 생성된 거래를 알려주는 알림',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      payload: 'instant_tx',
+    );
+  }
 }
