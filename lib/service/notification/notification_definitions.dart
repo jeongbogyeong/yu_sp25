@@ -120,4 +120,11 @@ const List<NotificationDefinition> notificationDefinitions = [
     frequency: "실시간",
     canToggle: false, // 🔒 스위치 비활성화
   ),
+  NotificationDefinition(
+    type: 14,
+    title: "실시간 하루 예산 초과 알림 (SMS)",
+    description: "문자를 기반으로 자동 생성된 거래를 알려드려요.",
+    frequency: "실시간",
+    canToggle: false, // 🔒 스위치 비활성화
+  ),
 ];

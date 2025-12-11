@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartmoney/screens/viewmodels/TransactionViewModel.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:intl/intl.dart';
 
 import 'notification_definitions.dart';
 
@@ -408,6 +409,69 @@ class NotificationService {
   static Future<PermissionStatus> requestNotificationPermissions() async {
     final status = await Permission.notification.request();
     return status;
+  }
+
+  /// ✅ 오늘 지출이 하루 예산을 초과했는지 체크하고,
+  ///    이미 오늘 한 번 울렸으면 다시 안 울리게 막는 메서드
+  static Future<void> checkDailyOverBudgetAndNotify({
+    required double todayTotal,
+    required double todayBudget,
+  }) async {
+    // 예산이 0 이하이면 의미 없음
+    if (todayBudget <= 0) return;
+
+    // 예산을 아직 안 넘었으면 알림 X
+    if (todayTotal <= todayBudget) {
+      debugPrint(
+        '[NotificationService] todayTotal=$todayTotal, '
+        'todayBudget=$todayBudget → 아직 예산 미초과',
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final flagKey = 'over_budget_notified_$todayKey';
+
+    // 이미 오늘 한 번 알림 보냈으면 재발송 X
+    final alreadyNotified = prefs.getBool(flagKey) ?? false;
+    if (alreadyNotified) {
+      debugPrint(
+        '[NotificationService] 오늘($todayKey) 예산 초과 알림 이미 발송됨. 재발송 안 함.',
+      );
+      return;
+    }
+
+    final f = NumberFormat('#,###');
+    final over = todayTotal - todayBudget;
+
+    final title = 'NudgeGap 알림: 오늘 예산을 초과했어요';
+    final body =
+        '오늘 사용 예산 ${f.format(todayBudget)}원을 '
+        '${f.format(over)}원 초과했어요. 카테고리를 한 번 점검해 볼까요?';
+
+    await _notifications.show(
+      999, // 일일 예산 초과 전용 ID
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_over_budget_channel',
+          '일일 예산 초과 알림',
+          channelDescription: '하루 사용 예산을 넘겼을 때 보내는 알림',
+          importance: Importance.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      payload: 'daily_over_budget',
+    );
+
+    // 오늘은 이미 알림 보냈다는 표시 남겨두기
+    await prefs.setBool(flagKey, true);
+
+    debugPrint(
+      '[NotificationService] 예산 초과 알림 발송 완료. todayTotal=$todayTotal, todayBudget=$todayBudget',
+    );
   }
 
   /// ✅ 6. 소비 기록이 2일 이상 없을 때만 울리는 알림

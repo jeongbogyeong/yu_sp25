@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/transaction_entity.dart';
 import '../viewmodels/TransactionViewModel.dart';
@@ -49,12 +50,40 @@ Future<void> createTransactionFromSms(
   final ok = await vm.insertTranaction(tx);
   debugPrint('✅ insertTransaction 결과: $ok');
 
-  // 🔔 거래 생성에 성공했으면, 실시간 알림 발사
+  // 🔔 거래 생성에 성공했으면, 실시간 "결제/입금" 알림
   if (ok) {
     await NotificationService.showInstantTransactionNotification(
       isIncome: isIncome,
       amount: parsed.amount, // 양수 금액 그대로
       memo: parsed.name,
     );
+
+    // 👇 여기부터: "오늘 예산 초과" 체크 로직
+
+    // 1) 오늘 날짜 문자열
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // 2) TransactionViewModel 에서 오늘 지출 합계 계산 (amount < 0 인 것만)
+    final txList = vm.transactions; // List<TransactionEntity>
+    final double todayTotalSpending = txList
+        .where((t) => t.createdAt == todayStr && t.amount < 0)
+        .fold<double>(0, (sum, t) => sum + t.amount.abs().toDouble());
+
+    debugPrint('📊 오늘 총 지출(문자 포함) = $todayTotalSpending 원');
+
+    // 3) SharedPreferences 에 저장된 하루 예산 불러오기
+    //    (예: ExpensePlanScreen 등에서 'daily_budget' 로 저장해놨다고 가정)
+    final prefs = await SharedPreferences.getInstance();
+    final double dailyBudget = prefs.getDouble('daily_budget') ?? 0.0;
+
+    debugPrint('📌 저장된 하루 예산(daily_budget) = $dailyBudget 원');
+
+    // 4) 입금이 아니라 지출이고, 하루 예산이 설정되어 있으며, 초과한 경우만 알림
+    if (!isIncome && dailyBudget > 0) {
+      await NotificationService.checkDailyOverBudgetAndNotify(
+        todayTotal: todayTotalSpending,
+        todayBudget: dailyBudget,
+      );
+    }
   }
 }
