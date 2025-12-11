@@ -10,6 +10,7 @@ import 'package:smartmoney/domain/entities/community_post_entity.dart';
 const Color _primaryColor = Color(0xFF4CAF50); // 긍정/강조 (녹색 계열)
 const Color _secondaryColor = Color(0xFFF0F4F8); // 배경색
 const Color _expenseColor = Color(0xFFEF5350); // 지출/경고 (빨간색 계열)
+const Color _textColor = Colors.black87; // 텍스트 색상
 
 // ✅ 커뮤니티 메인 화면 (Community Screen) - StatefulWidget으로 변경
 // ----------------------------------------------------
@@ -151,7 +152,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       elevation: 3,
       color: Colors.white,
       child: InkWell(
-        onTap: ()  {
+        onTap: () {
           final viewModel = Provider.of<CommunityViewModel>(
             context,
             listen: false,
@@ -164,25 +165,25 @@ class _CommunityScreenState extends State<CommunityScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PostDetailScreen(
-                post: {
-                  'id': post.id,
-                  'title': post.title,
-                  'content': post.content,
-                  // PostDetailScreen이 'user' 키를 작성자 이름으로 사용한다고 가정
-                  'user': post.authorName,
-                  'time': _formatTime(post.createdAt), // 포맷된 시간
-                  'likes': post.likesCount,
-                  'comments': post.commentsCount,
-                  'category': post.category,
-                  'authorId': post.authorId,
-                  // updatedAt 필드는 데이터베이스 스키마에 없지만 Entity에 있다면 포함 (있다면)
-                  // 'updatedAt': post.updatedAt.toIso8601String(),
-                },
-              ),
+              builder: (context) =>
+                  PostDetailScreen(
+                    post: {
+                      'id': post.id,
+                      'title': post.title,
+                      'content': post.content,
+                      // PostDetailScreen이 'user' 키를 작성자 이름으로 사용한다고 가정
+                      'user': post.authorName,
+                      'time': _formatTime(post.createdAt), // 포맷된 시간
+                      'likes': post.likesCount,
+                      'comments': post.commentsCount,
+                      'category': post.category,
+                      'authorId': post.authorId,
+                      // updatedAt 필드는 데이터베이스 스키마에 없지만 Entity에 있다면 포함 (있다면)
+                      // 'updatedAt': post.updatedAt.toIso8601String(),
+                    },
+                  ),
             ),
           );
-
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -294,7 +295,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     String title = '';
     String content = '';
-    String category = '자유'; // 기본 카테고리 (필요하다면 드롭다운 등으로 변경 가능)
+    String category = '자유'; // 기본 카테고리
+    final List<String> categories = [
+      '자유',
+      '생활비',
+      '난방비',
+      '환절기',
+      '연말정산',
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -303,115 +311,192 @@ class _CommunityScreenState extends State<CommunityScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return SingleChildScrollView(
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "새 글 작성",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        // ✅ BottomSheet 안에서만 쓰는 setState
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SingleChildScrollView(
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: 20,
+                    left: 20,
+                    right: 20,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
                   ),
-                  const Divider(height: 20, thickness: 1),
-                  // 제목 입력
-                  TextField(
-                    onChanged: (value) => title = value,
-                    decoration: const InputDecoration(
-                      hintText: "제목을 입력하세요",
-                      border: InputBorder.none,
-                    ),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  // 내용 입력
-                  TextField(
-                    onChanged: (value) => content = value,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      hintText: "내용을 입력하세요...",
-                      border: InputBorder.none,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (title.isNotEmpty && content.isNotEmpty) {
-                          // 💡 UserViewModel에서 현재 user 정보 가져오기
-                          final user = userViewModel.user;
-                          if (user == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('로그인이 필요합니다.')),
-                            );
-                            Navigator.pop(context);
-                            return;
-                          }
-
-                          // 💡 user.id 와 user.name 을 사용하여 게시글 작성
-                          final success = await viewModel.createPost(
-                            title: title,
-                            content: content,
-                            authorId: user.id, // UserEntity에서 ID 사용
-                            authorName:
-                                user.name ??
-                                '익명', // UserEntity에서 이름 사용 (null 대비)
-                            category: category,
-                          );
-
-                          if (success) {
-                            Navigator.pop(context);
-                            // 💡 새 게시글 작성 후 목록을 새로고침하여 즉시 반영
-                            await viewModel.loadPosts(limit: 20);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('게시글이 작성되었습니다.')),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  viewModel.errorMessage ?? '게시글 작성에 실패했습니다.',
-                                ),
-                              ),
-                            );
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('제목과 내용을 모두 입력해 주세요.'),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "등록하기",
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "새 글 작성",
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
+                      const Divider(height: 20, thickness: 1),
+
+                      // 제목 입력
+                      TextField(
+                        onChanged: (value) => title = value,
+                        decoration: const InputDecoration(
+                          hintText: "제목을 입력하세요",
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: _textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ✅ 카테고리 선택 UI (DropdownButton -> Chip/Wrap으로 변경)
+                      const Text(
+                        "카테고리",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Wrap(
+                        spacing: 8.0, // 가로 간격
+                        runSpacing: 8.0, // 세로 간격
+                        children: categories
+                            .map(
+                              (c) => InkWell(
+                            onTap: () {
+                              setModalState(() {
+                                category = c; // ✅ 선택된 카테고리 반영
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: category == c
+                                    ? _primaryColor.withOpacity(0.9) // 선택 시 메인 색상
+                                    : _secondaryColor, // 미선택 시 배경색
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: category == c
+                                      ? _primaryColor.withOpacity(0.9)
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Text(
+                                c,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: category == c
+                                      ? Colors.white // 선택 시 흰색 텍스트
+                                      : _textColor.withOpacity(0.7), // 미선택 시 어두운 텍스트
+                                ),
+                              ),
+                            ),
+                          ),
+                        ).toList(),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // 내용 입력
+                      TextField(
+                        onChanged: (value) => content = value,
+                        maxLines: 5,
+                        decoration: const InputDecoration(
+                          hintText: "내용을 입력하세요...",
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: const TextStyle(fontSize: 15, color: _textColor),
+                      ),
+
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (title.isNotEmpty && content.isNotEmpty) {
+                              // 💡 UserViewModel에서 현재 user 정보 가져오기
+                              final user = userViewModel.user;
+                              if (user == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('로그인이 필요합니다.'),
+                                  ),
+                                );
+                                Navigator.pop(context);
+                                return;
+                              }
+
+                              // 💡 user.id 와 user.name 을 사용하여 게시글 작성
+                              final success = await viewModel.createPost(
+                                title: title,
+                                content: content,
+                                authorId: user.id,
+                                authorName: user.name ?? '익명',
+                                category: category, // ✅ 선택한 카테고리 전달
+                              );
+
+                              if (success) {
+                                Navigator.pop(context);
+                                // 💡 새 게시글 작성 후 목록을 새로고침하여 즉시 반영
+                                await viewModel.loadPosts(limit: 20);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('게시글이 작성되었습니다.'),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      viewModel.errorMessage ??
+                                          '게시글 작성에 실패했습니다.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('제목과 내용을 모두 입력해 주세요.'),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            "작성 완료",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
