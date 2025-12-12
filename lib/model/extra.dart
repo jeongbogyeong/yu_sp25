@@ -1,3 +1,0 @@
-class Extra {
-  String? openType;
-}
