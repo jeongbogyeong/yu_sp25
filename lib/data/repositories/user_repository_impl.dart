@@ -20,6 +20,7 @@ class UserRepositoryImpl implements UserRepository {
     String name,
     int accountNumber,
     String bankName,
+    String incomeType, // ✅ 추가
   ) async {
     // remoteDataSource 에서 named parameter 로 받는 형태로 통일
     final response = await remoteDataSource.signup(
@@ -28,6 +29,7 @@ class UserRepositoryImpl implements UserRepository {
       name: name,
       accountNumber: accountNumber,
       bankName: bankName,
+      incomeType: incomeType, // ✅ 여기까지 전달
     );
     return response;
   }

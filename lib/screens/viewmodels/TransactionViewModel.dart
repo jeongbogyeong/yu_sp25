@@ -7,7 +7,7 @@ import '../../domain/usecases/transaction_user.dart';
 class TransactionViewModel with ChangeNotifier {
   final TransactionUser transactionUser;
 
-  // ✅ 널 대신 "빈 리스트"로 시작하게
+  // ✅ 널 대신 "빈 리스트"로 시작
   List<TransactionEntity> _transactions = [];
   List<TransactionEntity> get transactions => _transactions;
 
@@ -26,9 +26,9 @@ class TransactionViewModel with ChangeNotifier {
 
     // 최신 날짜가 위로 오도록 정렬
     _transactions.sort((a, b) {
-      final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
-      final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
-      return dateB.compareTo(dateA); // 내림차순
+      final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(0);
+      final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(0);
+      return dateB.compareTo(dateA);
     });
 
     notifyListeners();
@@ -41,17 +41,14 @@ class TransactionViewModel with ChangeNotifier {
         .insertTransaction(transaction);
 
     if (insertedTx != null) {
-      // 리스트에 추가 (널 아님)
       _transactions.add(insertedTx);
 
-      // 정렬
       _transactions.sort((a, b) {
-        final dateA = DateTime.tryParse(a.createdAt ?? '') ?? DateTime(0);
-        final dateB = DateTime.tryParse(b.createdAt ?? '') ?? DateTime(0);
+        final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(0);
+        final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(0);
         return dateB.compareTo(dateA);
       });
 
-      // ⭐ 마지막 소비 기록 날짜 저장
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         'last_spending_input',
@@ -80,5 +77,27 @@ class TransactionViewModel with ChangeNotifier {
       notifyListeners();
     }
     return isSuccess;
+  }
+
+  // 🔥 오늘 지출 총액 계산
+  double getTodayTotalSpending() {
+    final today = DateTime.now();
+    double total = 0;
+
+    for (final tx in _transactions) {
+      final dt = DateTime.tryParse(tx.createdAt);
+      if (dt == null) continue;
+
+      final isSameDay =
+          dt.year == today.year &&
+          dt.month == today.month &&
+          dt.day == today.day;
+
+      if (isSameDay) {
+        total += tx.amount; // 🔥 amount = 지출 금액
+      }
+    }
+
+    return total;
   }
 }

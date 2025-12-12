@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartmoney/screens/viewmodels/UserViewModel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../widgets/CommonDialog.dart';
 import '../../screens/ParentPage.dart';
-
-// ViewModel import
 import 'package:provider/provider.dart';
 
 final supabase = Supabase.instance.client;
@@ -20,6 +17,7 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
@@ -29,13 +27,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _isObscureText = true;
 
+  // ✅ 추가: 주 수입원 선택 값
+  String? _selectedIncomeType; // PART_TIME / SALARY / ALLOWANCE
+
+  // ✅ 추가: 주 수입원 옵션 리스트
+  final List<Map<String, String>> _incomeTypeOptions = const [
+    {'code': 'PART_TIME', 'label': '아르바이트 월급'},
+    {'code': 'SALARY', 'label': '회사원(월급)'},
+    {'code': 'ALLOWANCE', 'label': '용돈'},
+  ];
+
   static const Color primaryColor = Color(0xFF4CAF50);
   static const Color secondaryColor = Color(0xFFF0F4F8);
 
   Future<void> _signUp() async {
 
     if (!_formKey.currentState!.validate()) {
-      // print("폼 유효성 검사");
+      return;
+    }
+
+    // ✅ 드롭다운 값 필수 체크
+    if (_selectedIncomeType == null || _selectedIncomeType!.isEmpty) {
+      CommonDialog.show(
+        context,
+        title: "회원가입 실패 🚨",
+        content: "주 수입원을 선택해주세요.",
+        isSuccess: false,
+      );
       return;
     }
 
@@ -45,6 +63,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final name = nameController.text.trim();
     final accountNumberString = accountNumberController.text.trim();
     final bankName = bankNameController.text.trim();
+    final incomeType = _selectedIncomeType!; // PART_TIME / SALARY / ALLOWANCE
 
     if (password != confirmPassword) {
       CommonDialog.show(
@@ -56,7 +75,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // 계좌번호 필수가 아니므로, 비어있으면 0으로 파싱하고 아니면 입력값을 파싱합니다.
+    // 계좌번호 필수 아님
     final accountNumberInt = accountNumberString.isEmpty
         ? 0
         : (int.tryParse(accountNumberString) ?? 0);
@@ -75,24 +94,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
 
     try {
-      // int.parse() 대신 이미 숫자로 변환된 accountNumberInt를 사용합니다.
+      // ✅ incomeType 추가
       final userEntity = await userViewModel.signup(
         email,
         password,
         name,
         accountNumberInt,
         bankName,
+        incomeType,
       );
 
       if (userEntity != null) {
-
-        // 1. ✅ 먼저 화면을 ParentPage로 교체하여 이동시킵니다. (자동 이동)
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const ParentPage()),
         );
 
-        // 2. ✅ 화면 이동 후 다음 프레임(microtask)에서 팝업을 띄웁니다.
         Future.microtask(() {
           if (!mounted) return;
 
@@ -101,7 +118,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             title: "회원가입 성공 🎉",
             content: "회원가입이 완료되었습니다. 이제 SmartMoney와 함께하세요!",
             isSuccess: true,
-            // 화면이 이미 이동했으므로, onConfirmed는 팝업을 닫는 역할만 수행합니다.
             onConfirmed: () {},
           );
         });
@@ -110,7 +126,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         throw Exception("Authentication failed, user data not returned.");
       }
     } catch (e) {
-      // ⚠️ 에러 처리 로직은 변경 없음
       String message = "알 수 없는 오류가 발생했습니다.";
       if (e.toString().contains("email-already-in-use")) {
         message = "이미 사용 중인 이메일입니다. 다른 이메일로 시도해 주세요.";
@@ -135,7 +150,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // build 메서드 내용은 변경 없음 (UI 로직)
     return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
@@ -151,7 +165,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ... 이름 입력 필드
+              // 이름
               _buildTextFormField(
                 controller: nameController,
                 labelText: "이름",
@@ -166,7 +180,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ... 이메일 입력 필드
+              // 이메일
               _buildTextFormField(
                 controller: emailController,
                 labelText: "이메일",
@@ -184,7 +198,79 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ... 계좌번호 입력 필드
+              // 이메일 밑에 ↓ 이 블록 통째로 붙여넣기
+
+              // 🔹 주 수입원 섹션 타이틀
+              const Text(
+                "나의 주 수입원",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+
+              // 🔹 주 수입원 설명 텍스트
+              const Text(
+                "SmartMoney가 월급·용돈 등 돈이 주로 들어오는 경로를 이해하기 위해 사용하는 정보예요.",
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+
+              // ✅ 주 수입원 선택 드롭다운
+              DropdownButtonFormField<String>(
+                value: _selectedIncomeType,
+                isExpanded: true, // 🔥 이 줄 추가
+                items: _incomeTypeOptions
+                    .map(
+                      (option) => DropdownMenuItem<String>(
+                        value: option['code'],
+                        child: Text(option['label']!),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedIncomeType = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return '주 수입원을 선택해주세요.';
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                  labelText: "주 수입원 선택",
+                  hintText: "월급·아르바이트·용돈 중 하나를 선택하세요",
+                  prefixIcon: const Icon(
+                    Icons.work_outline,
+                    color: primaryColor,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16.0,
+                    horizontal: 10.0,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: primaryColor, width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Colors.grey,
+                      width: 0.5,
+                    ),
+                  ),
+                  errorStyle: const TextStyle(height: 0.5),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 계좌번호
               _buildTextFormField(
                 controller: accountNumberController,
                 labelText: "주 계좌번호 (선택, 숫자 20자리 이하)",
@@ -204,27 +290,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              // 은행 이름 입력 필드
+
+              // 은행 이름
               _buildTextFormField(
                 controller: bankNameController,
                 labelText: "은행 이름 (선택)",
                 icon: Icons.account_balance_outlined,
                 keyboardType: TextInputType.text,
                 validator: (value) {
-                  // 선택 입력이면 그냥 null 리턴해서 항상 통과
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // ... 비밀번호 입력 필드
+              // 비밀번호
               _buildPasswordFormField(
                 controller: passwordController,
                 labelText: "비밀번호 (6자 이상)",
               ),
               const SizedBox(height: 16),
 
-              // ... 비밀번호 확인 입력 필드
+              // 비밀번호 확인
               _buildPasswordFormField(
                 controller: confirmPasswordController,
                 labelText: "비밀번호 확인",
@@ -242,7 +328,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               const SizedBox(height: 32),
 
-              // ... 회원가입 버튼
               ElevatedButton(
                 onPressed: _signUp,
                 style: ElevatedButton.styleFrom(
